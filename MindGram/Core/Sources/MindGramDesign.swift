@@ -80,3 +80,18 @@ public enum MindGramBranding {
     /// Telegram's alternate app icons all carry the Telegram logo, so MindGram offers none.
     public static let offersTelegramAlternateIcons: Bool = false
 }
+
+/// Where MindGram keeps its data when Telegram's shared app group is unavailable.
+public enum MindGramStorage {
+    /// A build re-signed with a personal Apple ID (Sideloadly, AltStore) often has no access to the
+    /// `group.<bundle id>` container, and Telegram then stops launching on a black screen. This folder in
+    /// the app's own container takes its place; the share and notification extensions can't see it.
+    public static func fallbackAppGroupUrl() -> URL? {
+        guard let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let url = library.appendingPathComponent("MindGramAppGroup", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+}

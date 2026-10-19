@@ -48,7 +48,7 @@ Settings and branding:
 | `.../PeerInfoScreen/Sources/PeerInfoScreen.swift` | `PeerInfoSettingsSection.mindgram`. |
 | `.../PeerInfoScreen/Sources/PeerInfoSettingsItems.swift` | The **MindGram** row under "My Profile". |
 | `.../PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift` | Opens `mindGramSettingsController`. |
-| `submodules/TelegramUI/Sources/AppDelegate.swift` | Hides Telegram's alternate app icons (`MindGramBranding`). |
+| `submodules/TelegramUI/Sources/AppDelegate.swift` | Hides Telegram's alternate app icons (`MindGramBranding`); falls back to `MindGramStorage.fallbackAppGroupUrl()` when the app group is unavailable (re-signed builds used to stop on a black screen). |
 | `Telegram/BUILD` | App and extension names (`CFBundleDisplayName`, `CFBundleName`): `MindGram`. |
 | `Telegram/Telegram-iOS/*/InfoPlist.strings`, `en.lproj/Localizable.strings` | Localized name, intro title. |
 | `submodules/MtProtoKit/Sources/MTApiEnvironment.m` | App version shown on the server in "Devices": `MindGram 13.0 (…)`. |
