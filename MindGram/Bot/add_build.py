@@ -3,6 +3,7 @@
   python add_build.py add --ipa-url URL --built-at 2026-10-19T15:40:00+03:00 --telegram 13.0 \
       --whats-new-file new.txt --fixed-file fixed.txt [--run-url URL]
   python add_build.py edit 2 [--whats-new-file F] [--fixed-file F]
+  python add_build.py reupload 3
   python add_build.py list
 
 Builds are numbered in order: MindGram (1), (2), ... The IPA is downloaded into data/ipa/, where the
@@ -29,7 +30,11 @@ def add(args: argparse.Namespace) -> None:
     store.IPA_DIR.mkdir(parents=True, exist_ok=True)
     ipa_path = store.IPA_DIR / f"MindGram-{number}.ipa"
     print(f"Downloading {args.ipa_url} -> {ipa_path}")
-    urllib.request.urlretrieve(args.ipa_url, ipa_path)
+    # Download beside the target and rename when complete: the bot must never send a half-written IPA
+    # (Telegram keeps whatever it was sent first, under the build's file_id).
+    partial_path = ipa_path.with_suffix(".part")
+    urllib.request.urlretrieve(args.ipa_url, partial_path)
+    partial_path.replace(ipa_path)
     items.append({
         "number": number,
         "telegram_version": args.telegram,
@@ -42,6 +47,12 @@ def add(args: argparse.Namespace) -> None:
     })
     store.save_builds(items)
     print(f"Added MindGram ({number}), {ipa_path.stat().st_size // (1024 * 1024)} MB")
+
+
+def reupload(args: argparse.Namespace) -> None:
+    # Forget the Telegram copy; the next IPA press uploads the file from disk again.
+    store.update_build(args.number, file_id=None)
+    print(f"MindGram ({args.number}) will be uploaded again")
 
 
 def edit(args: argparse.Namespace) -> None:
@@ -78,6 +89,10 @@ def main() -> None:
     edit_parser.add_argument("--whats-new-file")
     edit_parser.add_argument("--fixed-file")
     edit_parser.set_defaults(handler=edit)
+
+    reupload_parser = commands.add_parser("reupload")
+    reupload_parser.add_argument("number", type=int)
+    reupload_parser.set_defaults(handler=reupload)
 
     commands.add_parser("list").set_defaults(handler=list_builds)
 
