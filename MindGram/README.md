@@ -48,11 +48,12 @@ Settings and branding:
 | `.../PeerInfoScreen/Sources/PeerInfoSettingsItems.swift` | The **MindGram** row under "My Profile". |
 | `.../PeerInfoScreen/Sources/PeerInfoScreenSettingsActions.swift` | Opens `mindGramSettingsController`. |
 | `submodules/TelegramUI/Sources/AppDelegate.swift` | Hides Telegram's alternate app icons (`MindGramBranding`). |
-| `Telegram/BUILD` | Name under the icon: `MindGram`. |
+| `Telegram/BUILD` | App and extension names (`CFBundleDisplayName`, `CFBundleName`): `MindGram`. |
 | `Telegram/Telegram-iOS/*/InfoPlist.strings`, `en.lproj/Localizable.strings` | Localized name, intro title. |
 | `submodules/MtProtoKit/Sources/MTApiEnvironment.m` | App version shown on the server in "Devices": `MindGram 13.0 (…)`. |
 | `Telegram/Telegram-iOS/Telegram.icon`, intro `telegram_*@2x.png` | Overwritten by `scripts/apply-branding.sh` from `Branding/`. |
 | `.github/workflows/mindgram.yml`, `.gitignore` | GitHub Actions build. |
+| `.gitmodules` | `rlottie` and `tgcalls` point at TelegramMessenger directly (upstream uses relative URLs that only work in Telegram's own repo). |
 
 ## Build
 
