@@ -1,0 +1,152 @@
+name: MindGram iOS
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Build configuration'
+        type: choice
+        default: release_arm64
+        options:
+          - release_arm64
+          - debug_arm64
+
+concurrency:
+  group: mindgram-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 360
+
+    steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          for x in /Applications/Xcode_*.app; do
+            case "$x" in
+              *Xcode_26*) ;;
+              *) sudo rm -rf "$x" ;;
+            esac
+          done
+          sudo rm -rf /Users/runner/Library/Android /usr/local/share/dotnet /usr/local/lib/node_modules /Users/runner/.ghcup || true
+          xcrun simctl delete all || true
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Select Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          WANTED=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')
+          if [ -d "/Applications/Xcode_$WANTED.app" ]; then
+            XCODE="/Applications/Xcode_$WANTED.app"
+          else
+            XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          fi
+          echo "versions.json wants Xcode $WANTED, using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Write build configuration
+        env:
+          API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          if [ -z "$API_ID" ] || [ -z "$API_HASH" ]; then
+            echo "Add TELEGRAM_API_ID and TELEGRAM_API_HASH in Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os
+          path = "build-system/appstore-configuration.json"
+          configuration = json.load(open(path))
+          configuration["api_id"] = os.environ["API_ID"]
+          configuration["api_hash"] = os.environ["API_HASH"]
+          json.dump(configuration, open("build-system/mindgram-configuration.json", "w"), indent=4)
+          PY
+
+      # Bazel's action cache (--disk_cache) plus its download cache. Every run saves under its own key,
+      # failed ones included, and every run restores the newest saved one, so a build that broke or ran
+      # out of time continues from what the previous attempt already compiled.
+      - name: Restore Bazel cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/telegram-bazel-cache
+            /private/var/tmp/_bazel_runner/cache/repos
+          key: bazel-${{ hashFiles('versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            bazel-${{ hashFiles('versions.json') }}-
+
+      - name: Build
+        # Leaves the last hour of the job for saving the cache, even when the build itself times out.
+        timeout-minutes: 290
+        run: |
+          BUILD_NUMBER=$(( $(cat build_number_offset) + ${{ github.run_number }} ))
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          python3 -u build-system/Make/Make.py \
+            --overrideXcodeVersion \
+            --cacheDir="$HOME/telegram-bazel-cache" \
+            build \
+            --configurationPath=build-system/mindgram-configuration.json \
+            --codesigningInformationPath=build-system/fake-codesigning \
+            --configuration=${{ inputs.configuration || 'release_arm64' }} \
+            --buildNumber=$BUILD_NUMBER
+
+      - name: Save Bazel cache
+        if: always()
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: |
+            ~/telegram-bazel-cache
+            /private/var/tmp/_bazel_runner/cache/repos
+          key: bazel-${{ hashFiles('versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Collect IPA
+        run: |
+          # bazel-bin points at the configuration of the last build, which is the one just made.
+          # bazel-out also keeps every configuration ever built, so it is only searched as a fallback,
+          # newest file first.
+          IPA="$GITHUB_WORKSPACE/bazel-bin/Telegram/Telegram.ipa"
+          if [ ! -f "$IPA" ]; then
+            IPA=$(find -L "$GITHUB_WORKSPACE/bazel-out" -path '*applebin_ios-ios_arm64*' -name Telegram.ipa -print0 2>/dev/null | xargs -0 ls -t | head -1)
+          fi
+          if [ -z "$IPA" ] || [ ! -f "$IPA" ]; then
+            echo "Telegram.ipa not found"
+            exit 1
+          fi
+          echo "IPA: $IPA"
+          mkdir -p "$GITHUB_WORKSPACE/build/artifacts"
+          cp "$IPA" "$GITHUB_WORKSPACE/build/artifacts/MindGram.ipa"
+          echo "IPA_PATH=$GITHUB_WORKSPACE/build/artifacts/MindGram.ipa" >> $GITHUB_ENV
+          ls -la "$GITHUB_WORKSPACE/build/artifacts"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MindGram-${{ env.BUILD_NUMBER }}
+          path: ${{ env.IPA_PATH }}
+          if-no-files-found: error
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["app"])')
+          gh release create "build-$BUILD_NUMBER" "$IPA_PATH" \
+            --title "MindGram $VERSION ($BUILD_NUMBER)" \
+            --notes "Unsigned MindGram build. Install with Sideloadly or AltStore using your Apple ID." \
+            || gh release upload "build-$BUILD_NUMBER" "$IPA_PATH" --clobber
