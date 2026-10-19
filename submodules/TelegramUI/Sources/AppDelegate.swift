@@ -349,6 +349,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
+        // MindGram: if the previous launch crashed, show its report instead of starting (MindGram/Core).
+        if MindGramLaunchTrace.begin() {
+            return true
+        }
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.voipDeviceToken.set(.single(token))
@@ -564,6 +568,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         })
         // MindGram: fall back to the app's own container when the app group is unavailable (sideloaded builds).
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName) ?? MindGramStorage.fallbackAppGroupUrl()
+        let mindGramSharedGroup = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName) != nil
+        MindGramLaunchTrace.step("app group: \(mindGramSharedGroup ? "shared" : "fallback"), root \(maybeAppGroupUrl?.path ?? "nil")")
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         self.buildConfig = buildConfig
@@ -722,6 +728,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        MindGramLaunchTrace.step("encryption parameters")
         
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
@@ -749,6 +756,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             writeAbilityTestSuccess = false
         }
         
+        MindGramLaunchTrace.step("write test: \(writeAbilityTestSuccess)")
         if !writeAbilityTestSuccess {
             let alertController = UIAlertController(title: nil, message: "The device does not have sufficient free space.", preferredStyle: .alert)
             alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in
@@ -773,6 +781,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let logsPath = rootPath + "/logs/app-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: logsPath))
+        MindGramLaunchTrace.step("logger")
 
         setManagedAudioSessionLogger({ s in
             Logger.shared.log("ManagedAudioSession", s)
@@ -819,6 +828,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             UNUserNotificationCenter.current().delegate = self
         }
         
+        MindGramLaunchTrace.step("legacy components")
         GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
         GlobalExperimentalSettings.enableFeed = false
         
@@ -1055,10 +1065,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         })
         
+        MindGramLaunchTrace.step("account manager")
         let accountManager: AccountManager<TelegramAccountManagerTypes> = setupAccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, resetLocalSecrets: {
             try resetWalletLocalSecrets()
         })
         self.accountManager = accountManager
+        MindGramLaunchTrace.step("account manager ready")
 
         telegramUIDeclareEncodables()
         initializeAccountManagement()
@@ -1762,6 +1774,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func attach(scene: UIWindowScene, connectionOptions: UIScene.ConnectionOptions) {
+        MindGramLaunchTrace.step("attach scene")
         self.statusBarHost?.scene = scene
         self.window?.windowScene = scene
 
@@ -1787,6 +1800,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
         self.mainWindow?.updateDeviceMetrics()
         self.window?.makeKeyAndVisible()
+        MindGramLaunchTrace.step("window visible")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            MindGramLaunchTrace.finish()
+        }
 
         for context in connectionOptions.urlContexts {
             let url = context.url

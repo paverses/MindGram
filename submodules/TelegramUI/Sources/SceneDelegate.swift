@@ -1,4 +1,5 @@
 import UIKit
+import Display
 
 @objc(SceneDelegate) final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -17,6 +18,11 @@ import UIKit
             return
         }
         guard let appDelegate = self.appDelegate else {
+            return
+        }
+        // MindGram: after a launch crash, show its report instead of the app (MindGram/Core).
+        if let reportWindow = MindGramLaunchTrace.presentPendingReport(in: windowScene) {
+            self.window = reportWindow
             return
         }
         self.isPrimaryScene = true
