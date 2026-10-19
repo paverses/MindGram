@@ -52,7 +52,7 @@ def list_keyboard(page: int) -> InlineKeyboardMarkup:
     page = min(max(page, 0), pages - 1)
     chunk = items[page * PAGE_SIZE:(page + 1) * PAGE_SIZE]
     rows = [
-        [button(f"IPA ({b['number']})", f"b:{b['number']}:{page}") for b in chunk[i:i + 2]]
+        [button(f"MindGram ({b['number']})", f"b:{b['number']}:{page}") for b in chunk[i:i + 2]]
         for i in range(0, len(chunk), 2)
     ]
     nav = [button("Назад", f"l:{page - 1}" if page > 0 else "s")]
