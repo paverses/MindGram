@@ -1,0 +1,15 @@
+[Unit]
+Description=MindGram builds bot (private)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/mindgram-bot
+EnvironmentFile=/opt/mindgram-bot/.env
+ExecStart=/opt/mindgram-bot/.venv/bin/python bot.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

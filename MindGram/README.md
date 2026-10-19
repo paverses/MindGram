@@ -14,6 +14,7 @@ below), so updating to a new Telegram version stays simple.
 | `Tabs/` | **Вкладки** (Tabs): which tabs the bottom bar shows. |
 | `Profile/` | **Профиль** (Profile): profile features (empty for now). |
 | `Branding/` | Logo (`logo.svg`), app icon (`AppIcon.icon`), intro screen images (`intro/`). |
+| `Bot/` | Private Telegram bot that hands out the builds (`@updateIPA_rabot`, server `/opt/mindgram-bot`). See `Bot/README.md`. |
 | `scripts/` | `apply-branding.sh`, `sync-upstream.sh`, `render-logo.ps1`. |
 | `UPSTREAM` | The Telegram-iOS commit MindGram is currently based on. |
 
