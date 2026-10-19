@@ -82,6 +82,9 @@ jobs:
           configuration = json.load(open(path))
           configuration["api_id"] = os.environ["API_ID"]
           configuration["api_hash"] = os.environ["API_HASH"]
+          # The IPA is re-signed with a personal certificate, which carries no iCloud entitlement;
+          # Telegram's CloudKit config fetch then throws at launch and the app is killed.
+          configuration["enable_icloud"] = False
           json.dump(configuration, open("build-system/mindgram-configuration.json", "w"), indent=4)
           PY
 

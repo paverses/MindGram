@@ -66,6 +66,8 @@ they are not stored in the code.
 The build is signed with Telegram's fake profiles (`build-system/fake-codesigning`). To install on
 iPhone, re-sign the IPA with your Apple ID in Sideloadly or AltStore.
 
+iCloud is off in CI builds (`enable_icloud: false` in the workflow): a re-signed IPA has no iCloud entitlement, and Telegram's CloudKit config fetch (`CloudData`, `Network.swift`) then crashed the app at launch.
+
 Bazel cache: every run, including failed or timed-out ones, saves `~/telegram-bazel-cache` to the
 GitHub cache, and the next run starts from it, so a repeat build only compiles what changed or was left
 unbuilt.
