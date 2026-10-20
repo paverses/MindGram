@@ -324,6 +324,10 @@ filegroup(
 alternate_icon_folders = [
     "MindGram",
     "MindGramInverted",
+    "MindGramGraphite",
+    "MindGramPaper",
+    "MindGramMidnight",
+    "MindGramSage",
     "BlackIcon",
     "BlackClassicIcon",
     "BlackFilledIcon",

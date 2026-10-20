@@ -100,3 +100,56 @@ foreach ($variant in @(@{ Name = "MindGram"; Inverted = $false }, @{ Name = "Min
     Save-Icon $dir "${name}NotificationIcon@2x.png" 40 $variant.Inverted
     Save-Icon $dir "${name}NotificationIcon@3x.png" 60 $variant.Inverted
 }
+
+# Extra minimal icons: same logo, a quiet two-tone background (top to bottom gradient), no glow.
+function Save-ThemedIcon([string]$dir, [string]$file, [int]$size, [string]$top, [string]$bottom, [string]$logo) {
+    $b = New-Object System.Drawing.Bitmap $size, $size
+    $g = [System.Drawing.Graphics]::FromImage($b)
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $rect = New-Object System.Drawing.Rectangle 0, 0, $size, $size
+    $grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush $rect, ([System.Drawing.ColorTranslator]::FromHtml($top)), ([System.Drawing.ColorTranslator]::FromHtml($bottom)), 90.0
+    $g.FillRectangle($grad, $rect)
+    $brush = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml($logo))
+    $w = $size * 0.586
+    $g.FillPath($brush, (New-LogoPath (($size - $w) / 2) (($size - $w * 54.5 / 69) / 2) $w))
+    $g.Dispose()
+    Save-Png $b (Join-Path $dir $file)
+}
+
+$themes = @(
+    @{ Name = "MindGramGraphite"; Top = "#34363B"; Bottom = "#1B1C1F"; Logo = "#F2F2F0" },
+    @{ Name = "MindGramPaper";    Top = "#F5F1E8"; Bottom = "#E6E0D2"; Logo = "#1F1F21" },
+    @{ Name = "MindGramMidnight"; Top = "#25324F"; Bottom = "#141B2D"; Logo = "#E9ECF4" },
+    @{ Name = "MindGramSage";     Top = "#9DB09A"; Bottom = "#78917A"; Logo = "#FBFBF7" }
+)
+foreach ($theme in $themes) {
+    $name = $theme.Name
+    $dir = Join-Path $iconRoot "$name.alticon"
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    foreach ($spec in @(@("$name@2x.png", 120), @("$name@3x.png", 180), @("${name}Ipad.png", 76), @("${name}Ipad@2x.png", 152), @("${name}LargeIpad@2x.png", 167), @("${name}NotificationIcon.png", 20), @("${name}NotificationIcon@2x.png", 40), @("${name}NotificationIcon@3x.png", 60))) {
+        Save-ThemedIcon $dir $spec[0] $spec[1] $theme.Top $theme.Bottom $theme.Logo
+    }
+}
+
+# Preview sheet of every icon, rounded like on the home screen.
+$names = @("MindGram", "MindGramInverted") + ($themes | ForEach-Object { $_.Name })
+$cell = 180; $gap = 36
+$sheet = New-Object System.Drawing.Bitmap ($names.Count * ($cell + $gap) + $gap), ($cell + $gap * 2)
+$g = [System.Drawing.Graphics]::FromImage($sheet)
+$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+$g.Clear([System.Drawing.ColorTranslator]::FromHtml("#8E8E93"))
+for ($i = 0; $i -lt $names.Count; $i++) {
+    $img = [System.Drawing.Image]::FromFile((Join-Path $iconRoot ("{0}.alticon\{0}@3x.png" -f $names[$i])))
+    $x = $gap + $i * ($cell + $gap); $y = $gap
+    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+    $r = 40
+    $path.AddArc($x, $y, $r * 2, $r * 2, 180, 90); $path.AddArc($x + $cell - $r * 2, $y, $r * 2, $r * 2, 270, 90)
+    $path.AddArc($x + $cell - $r * 2, $y + $cell - $r * 2, $r * 2, $r * 2, 0, 90); $path.AddArc($x, $y + $cell - $r * 2, $r * 2, $r * 2, 90, 90)
+    $path.CloseFigure()
+    $g.SetClip($path)
+    $g.DrawImage($img, $x, $y, $cell, $cell)
+    $g.ResetClip()
+    $img.Dispose()
+}
+$g.Dispose()
+Save-Png $sheet (Join-Path $PSScriptRoot "..\Branding\AlternateIcons-preview.png")

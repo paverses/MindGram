@@ -1004,7 +1004,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 // MindGram: its own icons instead of Telegram's (MindGram/Branding/AlternateIcons).
                 return [
                     PresentationAppIcon(name: "MindGram", imageName: "MindGram", isDefault: true),
-                    PresentationAppIcon(name: "MindGramInverted", imageName: "MindGramInverted")
+                    PresentationAppIcon(name: "MindGramInverted", imageName: "MindGramInverted"),
+                    PresentationAppIcon(name: "MindGramGraphite", imageName: "MindGramGraphite"),
+                    PresentationAppIcon(name: "MindGramPaper", imageName: "MindGramPaper"),
+                    PresentationAppIcon(name: "MindGramMidnight", imageName: "MindGramMidnight"),
+                    PresentationAppIcon(name: "MindGramSage", imageName: "MindGramSage")
                 ]
             }
             if #available(iOS 10.3, *) {
