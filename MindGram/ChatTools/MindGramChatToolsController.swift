@@ -66,6 +66,8 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             MindGramSelfDestruct.showsCountdown = value
         case 40:
             MindGramTranscription.isEnabled = value
+        case 50 ..< 50 + Int32(MindGramSendConfirm.Kind.allCases.count):
+            MindGramSendConfirm.set(MindGramSendConfirm.Kind.allCases[Int(id - 50)], value)
         case 41:
             MindGramTranscription.alwaysLocal = value
         default:
@@ -162,6 +164,12 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             entries.append(.toggle(id: 41, section: 4, title: strings.t("Всегда на устройстве", "Always on Device"), info: strings.t("Даже с Premium, звук не уходит", "Even with Premium, audio stays here"), value: MindGramTranscription.alwaysLocal))
         }
         entries.append(.footer(id: 42, section: 4, text: strings.t("Распознавание речи iOS на телефоне. В первый раз iOS спросит разрешение. Язык — язык iPhone.", "iOS speech recognition on the phone. iOS asks for permission the first time. The language is the iPhone's.")))
+
+        entries.append(.header(id: 49, section: 5, text: strings.t("ПОДТВЕРЖДЕНИЕ ПЕРЕД ОТПРАВКОЙ", "CONFIRM BEFORE SENDING")))
+        for (index, kind) in MindGramSendConfirm.Kind.allCases.enumerated() {
+            entries.append(.toggle(id: 50 + Int32(index), section: 5, title: kind.title(isRussian: strings.isRussian), info: kind.question(isRussian: strings.isRussian), value: MindGramSendConfirm.isOn(kind)))
+        }
+        entries.append(.footer(id: 60, section: 5, text: strings.t("Перед отправкой появится вопрос, чтобы не отправить случайно.", "A question appears before sending, so nothing goes out by accident.")))
         return entries
     })
     pushImpl = { [weak controller] c in

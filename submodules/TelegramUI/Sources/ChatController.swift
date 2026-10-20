@@ -9115,6 +9115,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
+        // MindGram: «Подтверждение перед отправкой» for stickers, GIFs, voice and round videos.
+        if !mindGramSendConfirmed, let kind = mindGramConfirmKind(messages), MindGramSendConfirm.isOn(kind) {
+            let isRussian = ["ru", "uk", "be"].contains(where: { self.presentationData.strings.baseLanguageCode.hasPrefix($0) })
+            self.present(textAlertController(context: self.context, title: nil, text: kind.question(isRussian: isRussian), actions: [
+                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}),
+                TextAlertAction(type: .defaultAction, title: isRussian ? "Отправить" : "Send", action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    mindGramSendConfirmed = true
+                    self.sendMessages(messages, media: media, postpone: postpone, commit: commit)
+                    mindGramSendConfirmed = false
+                })
+            ]), in: .window(.root))
+            return
+        }
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
             return
@@ -11412,4 +11428,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     public var contentContainerNode: ASDisplayNode {
         return self.chatDisplayNode.contentContainerNode
     }
+}
+
+// MindGram: «Подтверждение перед отправкой». Set while a confirmed send goes through.
+private var mindGramSendConfirmed = false
+
+/// What kind of easily-mistaken message `messages` sends, if any.
+private func mindGramConfirmKind(_ messages: [EnqueueMessage]) -> MindGramSendConfirm.Kind? {
+    for message in messages {
+        guard case let .message(_, _, _, mediaReference, _, _, _, _, _, _) = message, let file = mediaReference?.media as? TelegramMediaFile else {
+            continue
+        }
+        if file.isSticker || file.isAnimatedSticker || file.isVideoSticker {
+            return .sticker
+        } else if file.isInstantVideo {
+            return .round
+        } else if file.isVoice {
+            return .voice
+        } else if file.isAnimated {
+            return .gif
+        }
+    }
+    return nil
 }
