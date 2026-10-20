@@ -1510,8 +1510,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         if let item = self.item {
             let _ = item
-            replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-            self.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            replyRecognizer.allowBothDirections = MindGramSwipe.rightAction != .nothing // MindGram: swipe right
+            self.view.disablesInteractiveTransitionGestureRecognizer = MindGramSwipe.rightAction != .nothing // MindGram: swipe right
         }
         replyRecognizer.shouldBegin = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
@@ -4007,8 +4007,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         strongSelf.authorNameColor = authorNameColor
         strongSelf.authorRank = authorRank
         
-        strongSelf.replyRecognizer?.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-        strongSelf.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        strongSelf.replyRecognizer?.allowBothDirections = MindGramSwipe.rightAction != .nothing // MindGram: swipe right
+        strongSelf.view.disablesInteractiveTransitionGestureRecognizer = MindGramSwipe.rightAction != .nothing // MindGram: swipe right
         
         var animation = animation
         if strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -7464,7 +7464,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             case .none:
                                 break
                             case .reply:
-                                item.controllerInteraction.setupReply(item.message.id)
+                                // MindGram: the action chosen for this swipe direction.
+                                let mindGramAction = translation.x < 0.0 ? MindGramSwipe.leftAction : MindGramSwipe.rightAction
+                                if mindGramAction == .reply {
+                                    item.controllerInteraction.setupReply(item.message.id)
+                                } else {
+                                    self.mindGramPerform(mindGramAction, item: item)
+                                }
                             }
                         }
                     }

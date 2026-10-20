@@ -14,6 +14,7 @@ import ChatListUI
 import EmojiStatusComponent
 import TelegramUIPreferences
 import TranslateUI
+import Display
 import TelegramNotices
 
 extension ChatControllerImpl {

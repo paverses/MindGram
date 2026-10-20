@@ -110,6 +110,19 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             }))
         case 23:
             pushImpl?(mindGramPeersListController(context: context, title: strings.t("Самоуничтожение", "Self-Destruct"), footer: strings.t("В этих чатах ваши сообщения удаляются у всех по таймеру.", "In these chats your messages are deleted for everyone on a timer."), get: { MindGramSelfDestruct.selectedChats }, set: { MindGramSelfDestruct.selectedChats = $0 }))
+        case 33, 34:
+            let isLeft = id == 33
+            let options: [(id: String, title: String)] = MindGramTapAction.allCases.map { ($0.rawValue, $0.title(isRussian: strings.isRussian)) }
+            pushImpl?(mindGramPickerController(context: context, title: isLeft ? strings.t("Свайп влево", "Swipe Left") : strings.t("Свайп вправо", "Swipe Right"), options: options, selected: { (isLeft ? MindGramSwipe.leftAction : MindGramSwipe.rightAction).rawValue }, select: { value in
+                guard let action = MindGramTapAction(rawValue: value) else {
+                    return
+                }
+                if isLeft {
+                    MindGramSwipe.leftAction = action
+                } else {
+                    MindGramSwipe.rightAction = action
+                }
+            }))
         case 30, 31:
             let isDouble = id == 30
             let options: [(id: String, title: String)] = MindGramTapAction.allCases.map { ($0.rawValue, $0.title(isRussian: strings.isRussian)) }
@@ -162,7 +175,9 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
         entries.append(.header(id: 29, section: 3, text: strings.t("ТАПЫ ПО СООБЩЕНИЮ", "TAPS ON A MESSAGE")))
         entries.append(.value(id: 30, section: 3, title: strings.t("Двойной тап", "Double Tap"), value: MindGramTapAction.doubleTap.title(isRussian: strings.isRussian)))
         entries.append(.value(id: 31, section: 3, title: strings.t("Тройной тап", "Triple Tap"), value: MindGramTapAction.tripleTap.title(isRussian: strings.isRussian)))
-        entries.append(.footer(id: 32, section: 3, text: strings.t("С тройным тапом двойной срабатывает с задержкой 0,3 с.", "With a triple tap set, the double tap waits 0.3 s.")))
+        entries.append(.value(id: 33, section: 3, title: strings.t("Свайп влево", "Swipe Left"), value: MindGramSwipe.leftAction.title(isRussian: strings.isRussian)))
+        entries.append(.value(id: 34, section: 3, title: strings.t("Свайп вправо", "Swipe Right"), value: MindGramSwipe.rightAction.title(isRussian: strings.isRussian)))
+        entries.append(.footer(id: 36, section: 3, text: strings.t("С тройным тапом двойной срабатывает с задержкой 0,3 с. Свайп вправо по сообщению заменяет «назад» свайпом по пузырю; «Ничего» — как в Telegram.", "With a triple tap set, the double tap waits 0.3 s. A right swipe on a message replaces going back from that bubble; \"Nothing\" keeps Telegram's behavior.")))
 
         entries.append(.header(id: 39, section: 4, text: strings.t("РАСШИФРОВКА ГОЛОСОВЫХ", "VOICE TO TEXT")))
         entries.append(.toggle(id: 40, section: 4, title: strings.t("Расшифровка без Premium", "Voice to Text Without Premium"), info: strings.t("Голосовые и кружки в текст", "Voice and round messages to text"), value: MindGramTranscription.isEnabled))

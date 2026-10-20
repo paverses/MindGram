@@ -195,3 +195,17 @@ public extension MindGramTranscription {
         return true
     }
 }
+
+/// Swipes on a message: the usual swipe to the left, and a swipe to the right.
+public enum MindGramSwipe {
+    public static var leftAction: MindGramTapAction {
+        get { return MindGramTapAction(rawValue: MindGramDefaults.string("MindGram.swipe.left", default: MindGramTapAction.reply.rawValue)) ?? .reply }
+        set { MindGramDefaults.setString("MindGram.swipe.left", newValue.rawValue) }
+    }
+
+    /// `.nothing` keeps Telegram's behavior: swiping right goes back from the chat.
+    public static var rightAction: MindGramTapAction {
+        get { return MindGramTapAction(rawValue: MindGramDefaults.string("MindGram.swipe.right", default: MindGramTapAction.nothing.rawValue)) ?? .nothing }
+        set { MindGramDefaults.setString("MindGram.swipe.right", newValue.rawValue) }
+    }
+}
