@@ -95,3 +95,26 @@ public enum MindGramStorage {
         return url
     }
 }
+
+public extension MindGramBranding {
+    /// The name shown under a MindGram icon in Telegram's Appearance > App Icon.
+    static func iconTitle(_ iconName: String, languageCode: String) -> String? {
+        let russian = languageCode.hasPrefix("ru") || languageCode.hasPrefix("uk") || languageCode.hasPrefix("be")
+        switch iconName {
+        case "MindGram":
+            return russian ? "Классика" : "Classic"
+        case "MindGramInverted":
+            return russian ? "Инверсия" : "Inverted"
+        case "MindGramGraphite":
+            return russian ? "Графит" : "Graphite"
+        case "MindGramPaper":
+            return russian ? "Бумага" : "Paper"
+        case "MindGramMidnight":
+            return russian ? "Полночь" : "Midnight"
+        case "MindGramSage":
+            return russian ? "Спокойный" : "Calm"
+        default:
+            return nil
+        }
+    }
+}

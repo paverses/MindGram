@@ -403,7 +403,8 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                 case "PremiumTurbo":
                                     name = item.strings.Appearance_AppIconTurbo
                                 default:
-                                    name = icon.name
+                                    // MindGram: its icons are named in MindGram/Core (Классика, Графит, …).
+                                    name = MindGramBranding.iconTitle(icon.name, languageCode: item.strings.primaryComponent.languageCode) ?? icon.name
                             }
                         
                             imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), locked: !item.isPremium && icon.isPremium, color: item.theme.list.itemPrimaryTextColor, bordered: bordered, selected: selected, action: {
