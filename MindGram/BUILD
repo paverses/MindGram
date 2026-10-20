@@ -7,6 +7,8 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 #   Tabs/          Вкладки
 #   Glass/         Liquid Glass
 #   MenuSections/  Разделы меню
+#   GhostMode/     Режим призрака
+#   Report/        Отчёт (what works, errors, export)
 swift_library(
     name = "MindGramUI",
     module_name = "MindGramUI",
@@ -17,6 +19,8 @@ swift_library(
         "Tabs/**/*.swift",
         "Glass/**/*.swift",
         "MenuSections/**/*.swift",
+        "GhostMode/**/*.swift",
+        "Report/**/*.swift",
     ]),
     copts = [
         "-warnings-as-errors",
@@ -31,6 +35,9 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ItemListUI:ItemListUI",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/ItemListPeerItem:ItemListPeerItem",
+        "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ComponentFlow:ComponentFlow",

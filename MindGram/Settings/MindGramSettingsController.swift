@@ -16,7 +16,9 @@ private enum MindGramMenuItem: Int32 {
     case tabs = 2
     case liquidGlass = 3
     case menuSections = 4
-    case footer = 5
+    case ghost = 5
+    case report = 6
+    case footer = 7
 }
 
 /// The "MindGram" screen opened from Settings: one row per MindGram section.
@@ -38,6 +40,10 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             pushImpl?(mindGramGlassController(context: context))
         case .menuSections:
             pushImpl?(mindGramMenuSectionsController(context: context))
+        case .ghost:
+            pushImpl?(mindGramGhostController(context: context))
+        case .report:
+            pushImpl?(mindGramReportController(context: context))
         case .footer:
             break
         }
@@ -53,6 +59,10 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             return PresentationResourcesSettings.effects
         case "menu":
             return PresentationResourcesSettings.settings
+        case "ghost":
+            return PresentationResourcesSettings.security
+        case "report":
+            return PresentationResourcesSettings.dataUsage
         default:
             return nil
         }
@@ -66,6 +76,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             .disclosure(id: MindGramMenuItem.tabs.rawValue, section: section, title: strings.tabs, icon: "tabs"),
             .disclosure(id: MindGramMenuItem.liquidGlass.rawValue, section: section, title: strings.liquidGlass, icon: "glass"),
             .disclosure(id: MindGramMenuItem.menuSections.rawValue, section: section, title: strings.menuSections, icon: "menu"),
+            .disclosure(id: MindGramMenuItem.ghost.rawValue, section: section, title: strings.ghostMode, icon: "ghost"),
+            .disclosure(id: MindGramMenuItem.report.rawValue, section: section, title: strings.report, icon: "report"),
             .footer(id: MindGramMenuItem.footer.rawValue, section: section, text: strings.menuFooter)
         ]
     })

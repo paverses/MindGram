@@ -2,6 +2,7 @@ import Foundation
 import TelegramApi
 import Postbox
 import SwiftSignalKit
+import MindGramGhost
 import MtProtoKit
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
@@ -43,6 +44,8 @@ private final class AccountPresenceManagerImpl {
     }
     
     private func updatePresence(_ isOnline: Bool) {
+        // MindGram: ghost mode "Скрыть «в сети»" always reports offline.
+        let isOnline = isOnline && !MindGramGhost.blocks(.hideOnline, peerId: nil)
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in

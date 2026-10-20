@@ -13,6 +13,7 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramApi:TelegramApi",
+        "//MindGram/Ghost:MindGramGhost",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/MediaPreuploadRegistry:MediaPreuploadRegistry",
         "//submodules/WebProxyTransport:WebProxyTransport",

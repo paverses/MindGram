@@ -366,6 +366,18 @@ func chatContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, promoI
                             }
                         }
                         
+                        // MindGram: ghost mode keeps read receipts back; this sends the real one for the chat.
+                        if MindGramGhost.applies(.hideRead, peerId: peerId.toInt64()) {
+                            let isRussian = ["ru", "uk", "be"].contains(where: { strings.primaryComponent.languageCode.lowercased().hasPrefix($0) })
+                            items.append(.action(ContextMenuActionItem(text: isRussian ? "Отправить прочтение" : "Send Read Receipt", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                if isUnread {
+                                    let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).startStandalone()
+                                }
+                                let _ = mindGramSendReadReceipt(account: context.account, peerId: peerId).startStandalone()
+                                f(.default)
+                            })))
+                        }
+
                         if !isCommunity {
                             if isUnread {
                                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in

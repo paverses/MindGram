@@ -8,6 +8,9 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    deps = [
+        "//MindGram/Ghost:MindGramGhost",
+    ],
     copts = [
         "-warnings-as-errors",
     ],

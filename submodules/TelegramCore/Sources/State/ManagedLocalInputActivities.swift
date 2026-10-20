@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import MindGramGhost
 import TelegramApi
 import MtProtoKit
 
@@ -141,7 +142,25 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
     }
 }
 
+private func mindGramHidesActivity(_ activity: PeerInputActivity?, peerId: PeerId) -> Bool {
+    guard let activity else {
+        return false
+    }
+    switch activity {
+    case .recordingVoice, .uploadingFile, .uploadingPhoto, .uploadingVideo, .recordingInstantVideo, .uploadingInstantVideo:
+        return MindGramGhost.blocks(.hideMediaActivity, peerId: peerId.toInt64())
+    case .speakingInGroupCall:
+        return false
+    default:
+        return MindGramGhost.blocks(.hideTyping, peerId: peerId.toInt64())
+    }
+}
+
 private func requestActivity(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, threadId: Int64?, activity: PeerInputActivity?) -> Signal<Void, NoError> {
+    // MindGram: ghost mode keeps typing and media activity to itself.
+    if mindGramHidesActivity(activity, peerId: peerId) {
+        return .complete()
+    }
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if peerId == accountPeerId {

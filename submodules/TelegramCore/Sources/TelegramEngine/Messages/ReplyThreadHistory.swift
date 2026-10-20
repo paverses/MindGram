@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import MindGramGhost
 import TelegramApi
 
 private struct DiscussionMessage {
@@ -492,6 +493,10 @@ private class ReplyThreadHistoryContextImpl {
                     return .single(.boolFalse)
                 }
                 |> ignoreValues
+                // MindGram: ghost mode "Скрыть «прочитано»" covers comment threads too.
+                if MindGramGhost.blocks(.hideRead, peerId: messageIndex.id.peerId.toInt64()) {
+                    signal = .complete()
+                }
                 if revalidate {
                     let validateSignal = strongSelf.account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: Int32(clamping: threadId)))
                     |> map { result -> (MessageId?, Int) in

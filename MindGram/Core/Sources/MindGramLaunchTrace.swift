@@ -17,6 +17,26 @@ public enum MindGramLaunchTrace {
         return FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first?.appendingPathComponent("MindGramLaunch.txt")
     }
 
+    private static var lastCrashUrl: URL? {
+        return FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first?.appendingPathComponent("MindGramLastCrash.txt")
+    }
+
+    /// The record of the last launch that crashed, kept until the next crash.
+    public static var lastCrashReport: String? {
+        guard let url = self.lastCrashUrl else {
+            return nil
+        }
+        return try? String(contentsOf: url, encoding: .utf8)
+    }
+
+    /// The steps of this launch so far.
+    public static var currentLaunchSteps: String? {
+        guard let url = self.url else {
+            return nil
+        }
+        return try? String(contentsOf: url, encoding: .utf8)
+    }
+
     /// Call first thing in `didFinishLaunching`. Returns true when the previous launch crashed and
     /// its report should be shown instead of starting the app.
     public static func begin() -> Bool {
@@ -25,6 +45,10 @@ public enum MindGramLaunchTrace {
         }
         if let previous = try? String(contentsOf: url, encoding: .utf8), !previous.contains(self.finishedMarker) {
             self.pendingReport = previous
+            // Kept for the «Отчёт» screen after the report window is gone.
+            if let crashUrl = self.lastCrashUrl {
+                try? previous.write(to: crashUrl, atomically: true, encoding: .utf8)
+            }
         }
 
         let info = Bundle.main.infoDictionary

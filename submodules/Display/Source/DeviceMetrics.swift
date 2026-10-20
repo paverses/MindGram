@@ -555,6 +555,24 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         if case .iPhoneX = self {
             return false
         }
-        return self.hasTopNotch
+        // MindGram: also under the Dynamic Island, as Swiftgram does (Telegram shows it on notches only).
+        return self.hasTopNotch || self.hasDynamicIsland
+    }
+
+    /// MindGram: how far from the top the app badge sits; under the island on Dynamic Island iPhones
+    /// (offsets from Swiftgram's SGAppBadgeOffset), Telegram's 5 pt under a notch.
+    public var appBadgeTopOffset: CGFloat {
+        switch self {
+        case .iPhone14Pro, .iPhone14ProZoomed:
+            return 18.0
+        case .iPhone14ProMax, .iPhone14ProMaxZoomed:
+            return 19.0
+        case .iPhone16Pro, .iPhone18Pro:
+            return 21.0
+        case .iPhone16ProMax, .iPhoneAir, .iPhone18ProMax:
+            return 22.0
+        default:
+            return 5.0
+        }
     }
 }

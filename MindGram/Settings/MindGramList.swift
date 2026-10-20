@@ -6,6 +6,14 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import TextFormat
+
+/// How a status row is colored: works, off, problem.
+enum MindGramStatusTone: Int {
+    case ok
+    case off
+    case problem
+}
 
 /// One row of a MindGram settings screen. Every screen is a list of these, built from the current settings.
 enum MindGramListEntry: ItemListNodeEntry {
@@ -15,17 +23,23 @@ enum MindGramListEntry: ItemListNodeEntry {
     case footer(id: Int32, section: ItemListSectionId, text: String)
     /// A row whose item the screen builds itself (sliders, previews); `revision` changes when it must redraw.
     case custom(id: Int32, section: ItemListSectionId, key: String, revision: Int)
+    /// A title with a colored status on the right; tapping calls `open`.
+    case status(id: Int32, section: ItemListSectionId, title: String, value: String, tone: MindGramStatusTone)
+    /// A button row; tapping calls `open`.
+    case action(id: Int32, section: ItemListSectionId, title: String)
+    /// Multiline text: plain words, or monospaced code such as an error with its place in the code.
+    case text(id: Int32, section: ItemListSectionId, text: String, monospace: Bool)
 
     var section: ItemListSectionId {
         switch self {
-        case let .header(_, section, _), let .toggle(_, section, _, _, _), let .disclosure(_, section, _, _), let .footer(_, section, _), let .custom(_, section, _, _):
+        case let .header(_, section, _), let .toggle(_, section, _, _, _), let .disclosure(_, section, _, _), let .footer(_, section, _), let .custom(_, section, _, _), let .status(_, section, _, _, _), let .action(_, section, _), let .text(_, section, _, _):
             return section
         }
     }
 
     var stableId: Int32 {
         switch self {
-        case let .header(id, _, _), let .toggle(id, _, _, _, _), let .disclosure(id, _, _, _), let .footer(id, _, _), let .custom(id, _, _, _):
+        case let .header(id, _, _), let .toggle(id, _, _, _, _), let .disclosure(id, _, _, _), let .footer(id, _, _), let .custom(id, _, _, _), let .status(id, _, _, _, _), let .action(id, _, _), let .text(id, _, _, _):
             return id
         }
     }
@@ -51,6 +65,25 @@ enum MindGramListEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: section)
         case let .custom(_, section, key, _):
             return arguments.customItem(key, presentationData, section)
+        case let .status(id, section, title, value, tone):
+            let color: UIColor
+            switch tone {
+            case .ok:
+                color = UIColor(rgb: 0x34c759)
+            case .off:
+                color = presentationData.theme.list.itemSecondaryTextColor
+            case .problem:
+                color = presentationData.theme.list.itemDestructiveColor
+            }
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: value, labelStyle: .coloredText(color), sectionId: section, style: .blocks, action: {
+                arguments.open(id)
+            })
+        case let .action(id, section, title):
+            return ItemListActionItem(presentationData: presentationData, systemStyle: .glass, title: title, kind: .generic, alignment: .natural, sectionId: section, style: .blocks, action: {
+                arguments.open(id)
+            })
+        case let .text(_, section, text, monospace):
+            return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], font: monospace ? .monospace : .default, sectionId: section, style: .blocks)
         }
     }
 }

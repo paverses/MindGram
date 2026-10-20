@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import MindGramGhost
 
 
 private enum PeerReadStateMarker: Equatable {
@@ -176,6 +177,12 @@ private func confirmSynchronized(postbox: Postbox, peerId: PeerId) -> Signal<Voi
 }
 
 private func validatePeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId) -> Signal<Never, PeerReadStateValidationError> {
+    // MindGram: under ghost mode the server still holds the chat as unread; validating against it
+    // would retry forever and then turn the locally read messages back to unread.
+    if MindGramGhost.blocks(.hideRead, peerId: peerId.toInt64()) {
+        return confirmSynchronized(postbox: postbox, peerId: peerId)
+        |> ignoreValues
+    }
     if peerId.namespace == Namespaces.Peer.SecretChat {
         // A secret chat has no Api.InputPeer, so there is no dialog to read an authoritative
         // read state from: every step below fails at inputPeer and asks to retry, forever.
@@ -246,7 +253,11 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
     return maybeAppliedReadState
 }
 
-private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState) -> Signal<PeerReadState, PeerReadStateValidationError> {
+private func pushPeerReadState(network: Network, postbox: Postbox, stateManager: AccountStateManager, peerId: PeerId, readState: PeerReadState, ignoreGhost: Bool = false) -> Signal<PeerReadState, PeerReadStateValidationError> {
+    // MindGram: ghost mode "Скрыть «прочитано»" keeps the read state on this device only.
+    if !ignoreGhost && MindGramGhost.blocks(.hideRead, peerId: peerId.toInt64()) {
+        return .single(readState)
+    }
     if peerId.namespace == Namespaces.Peer.SecretChat {
         // Decide whether a request is needed before looking the peer up: inputSecretChat goes
         // through loadedPeerWithId, which never emits when the peer row is missing and fails
@@ -430,4 +441,37 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
         |> then(validatePeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId))
     }
     return signal
+}
+
+/// MindGram: "Отметить прочитанным" — tells the server the chat is read up to its last message,
+/// even while ghost mode keeps read receipts to this device.
+public func mindGramSendReadReceipt(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+    let network = account.network
+    let postbox = account.postbox
+    let stateManager = account.stateManager
+    return postbox.transaction { transaction -> PeerReadState? in
+        guard let readStates = transaction.getPeerReadStates(peerId) else {
+            return nil
+        }
+        for (namespace, readState) in readStates where namespace == Namespaces.Message.Cloud || namespace == Namespaces.Message.SecretIncoming {
+            if case let .idBased(_, maxOutgoingReadId, maxKnownId, _, _) = readState {
+                return .idBased(maxIncomingReadId: maxKnownId, maxOutgoingReadId: maxOutgoingReadId, maxKnownId: maxKnownId, count: 0, markedUnread: false)
+            }
+            return readState
+        }
+        return nil
+    }
+    |> castError(PeerReadStateValidationError.self)
+    |> mapToSignal { readState -> Signal<PeerReadState, PeerReadStateValidationError> in
+        guard let readState else {
+            MindGramLog.error("Режим призрака", "Отправить прочтение: у чата \(peerId) нет состояния прочтения в базе (transaction.getPeerReadStates = nil)")
+            return .complete()
+        }
+        return pushPeerReadState(network: network, postbox: postbox, stateManager: stateManager, peerId: peerId, readState: readState, ignoreGhost: true)
+    }
+    |> ignoreValues
+    |> `catch` { error -> Signal<Never, NoError> in
+        MindGramLog.error("Режим призрака", "Отправить прочтение: сервер не принял прочтение чата \(peerId), ошибка \(error)")
+        return .complete()
+    }
 }

@@ -115,6 +115,70 @@ public struct MindGramStrings {
     var proxySponsorInfo: String { return t("Убирает закреп от прокси", "Removes the proxy's pinned chat") }
     var menuSectionsFooter: String { return t("Пункт MindGram скрыть нельзя.", "The MindGram row can't be hidden.") }
 
+    // Режим призрака
+    var ghostMode: String { return t("Режим призрака", "Ghost Mode") }
+    var ghostModeInfo: String { return t("Никто не видит вашу активность", "Nobody sees your activity") }
+    var ghostWhatHeader: String { return t("ЧТО СКРЫВАТЬ", "WHAT TO HIDE") }
+    func ghostTitle(_ option: MindGramGhost.Option) -> String {
+        switch option {
+        case .hideRead:
+            return t("Скрыть прочтение", "Hide Read Receipts")
+        case .hideOnline:
+            return t("Скрыть онлайн", "Hide Online")
+        case .hideTyping:
+            return t("Скрыть «печатает»", "Hide Typing")
+        case .hideMediaActivity:
+            return t("Скрыть запись и отправку", "Hide Recording and Uploading")
+        case .hideListening:
+            return t("Скрыть прослушивание", "Hide Listening")
+        case .anonymousStories:
+            return t("Анонимный просмотр историй", "Anonymous Story Viewing")
+        case .chatListButton:
+            return t("Кнопка в списке чатов", "Button in Chat List")
+        }
+    }
+    func ghostInfo(_ option: MindGramGhost.Option) -> String {
+        switch option {
+        case .hideRead:
+            return t("Галочки не станут двойными", "Checkmarks stay single")
+        case .hideOnline:
+            return t("Всегда «был(а) недавно»", "Always \"last seen recently\"")
+        case .hideTyping:
+            return t("Набор текста и стикеров", "Typing and choosing stickers")
+        case .hideMediaActivity:
+            return t("Голосовые, кружки, фото, файлы", "Voice, round videos, photos, files")
+        case .hideListening:
+            return t("Голосовые и кружки не прослушаны", "Voice and round stay unplayed")
+        case .anonymousStories:
+            return t("Вас нет в списке зрителей", "You're not in the viewers list")
+        case .chatListButton:
+            return t("Призрак вкл/выкл одним тапом", "Ghost on/off in one tap")
+        }
+    }
+    var ghostWhereHeader: String { return t("ГДЕ РАБОТАЕТ", "WHERE IT WORKS") }
+    var ghostOnlySelected: String { return t("Только в выбранных чатах", "Only in Selected Chats") }
+    var ghostOnlySelectedInfo: String { return t("Призрак в отдельных чатах", "Ghost in specific chats") }
+    var ghostChats: String { return t("Чаты с призраком", "Ghost Chats") }
+    var ghostExceptions: String { return t("Исключения", "Exceptions") }
+    var ghostWhereFooter: String { return t("В исключениях люди видят ваш настоящий статус: прочтение, набор текста и запись. Онлайн скрывается для всех сразу, поэтому в режиме выбранных чатов он виден.", "People in exceptions see your real status: read receipts, typing and recording. Online is hidden for everyone at once, so with selected chats it stays visible.") }
+    var ghostFooter: String { return t("Чтобы отметить чат прочитанным вручную, зажмите его в списке чатов и нажмите «Отправить прочтение».", "To mark a chat as read manually, press and hold it in the chat list and tap \"Send Read Receipt\".") }
+    var ghostAddChat: String { return t("Добавить чат", "Add Chat") }
+    var ghostChatsFooter: String { return t("Режим призрака работает только в этих чатах. Смахните влево, чтобы убрать.", "Ghost mode works only in these chats. Swipe left to remove.") }
+    var ghostExceptionsFooter: String { return t("Эти чаты видят ваше прочтение, набор текста и запись. Смахните влево, чтобы убрать.", "These chats see your read receipts, typing and recording. Swipe left to remove.") }
+
+    // Отчёт
+    var report: String { return t("Отчёт", "Report") }
+    var reportStatusHeader: String { return t("ЧТО РАБОТАЕТ", "WHAT WORKS") }
+    var reportExportHeader: String { return t("ОТЧЁТ", "REPORT") }
+    var reportCopy: String { return t("Скопировать отчёт", "Copy Report") }
+    var reportSendToSaved: String { return t("Отправить в Избранное", "Send to Saved Messages") }
+    var reportSendToChat: String { return t("Отправить в чат…", "Send to Chat…") }
+    var reportClearErrors: String { return t("Очистить ошибки", "Clear Errors") }
+    var reportFooter: String { return t("Отчёт уходит файлом .txt: кратко что работает и что нет, затем каждая функция словами и кодом — значения, файлы Swift и точные ошибки.", "The report is sent as a .txt file: a short summary, then every feature in words and in code — values, Swift files and exact errors.") }
+    var reportStatus: String { return t("Состояние", "Status") }
+    var reportInWords: String { return t("СЛОВАМИ", "IN WORDS") }
+    var reportInCode: String { return t("В КОДЕ", "IN CODE") }
+
     // Profile rows
     var peerIdLabel: String { return "ID" }
     var datacenterLabel: String { return "DC" }

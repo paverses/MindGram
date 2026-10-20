@@ -6798,10 +6798,35 @@ private final class ChatListLocationContext {
     var proxyButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
     var storyButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
     
+    // MindGram: the ghost mode button, shown on the root chat list when not editing.
+    var mindGramShowsGhostButton = false
+    private var mindGramGhostObserver: NSObjectProtocol?
+
     var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] {
         var result: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
         if let rightButton = self.rightButton {
             result.append(rightButton)
+        }
+        if self.mindGramShowsGhostButton && MindGramGhost.isSet(.chatListButton) {
+            let isOn = MindGramGhost.isEnabled
+            result.append(AnyComponentWithIdentity(id: "mindgram-ghost", component: AnyComponent(NavigationButtonComponent(
+                content: .icon(imageName: isOn ? "Chat List/Archive/IconHide" : "Item List/Icons/View"),
+                pressed: { [weak self] _ in
+                    guard let self, let parentController = self.parentController else {
+                        return
+                    }
+                    MindGramGhost.isEnabled = !MindGramGhost.isEnabled
+                    let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                    let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.primaryComponent.languageCode.lowercased().hasPrefix($0) })
+                    let text: String
+                    if MindGramGhost.isEnabled {
+                        text = isRussian ? "Режим призрака включён" : "Ghost mode is on"
+                    } else {
+                        text = isRussian ? "Режим призрака выключен" : "Ghost mode is off"
+                    }
+                    parentController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: text, timeout: 2.0, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                }
+            ))))
         }
         if let storyButton = self.storyButton {
             result.append(storyButton)
@@ -7147,11 +7172,18 @@ private final class ChatListLocationContext {
                 }
             }
         })
+
+        self.mindGramGhostObserver = NotificationCenter.default.addObserver(forName: MindGramGhost.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            self?.parentController?.requestLayout(transition: .immediate)
+        })
     }
-                                
+
     deinit {
         self.titleDisposable?.dispose()
         self.stateDisposable?.dispose()
+        if let mindGramGhostObserver = self.mindGramGhostObserver {
+            NotificationCenter.default.removeObserver(mindGramGhostObserver)
+        }
     }
     
     private func updateChatList(
@@ -7185,6 +7217,7 @@ private final class ChatListLocationContext {
             if case .chatList(.root) = self.location {
                 self.rightButton = nil
                 self.storyButton = nil
+                self.mindGramShowsGhostButton = false
                 self.proxyButton = nil
             }
             let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
@@ -7201,6 +7234,7 @@ private final class ChatListLocationContext {
             if case .chatList(.root) = self.location {
                 self.rightButton = nil
                 self.storyButton = nil
+                self.mindGramShowsGhostButton = false
                 self.proxyButton = nil
             }
             self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
@@ -7272,6 +7306,8 @@ private final class ChatListLocationContext {
                         )))
                     }
                 }
+                
+                self.mindGramShowsGhostButton = true
                 
                 if storyPostingAvailable {
                     self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
