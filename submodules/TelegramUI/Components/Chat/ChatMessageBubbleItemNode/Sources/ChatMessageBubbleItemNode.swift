@@ -1494,6 +1494,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
         }
+        // MindGram: a third quick tap cancels the pending double-tap action.
+        recognizer.mindGramTripleTapBegan = { [weak self] in
+            guard let self, MindGramTapAction.tripleTap != .nothing else {
+                return
+            }
+            self.mindGramPendingDoubleTap?.cancel()
+            self.mindGramPendingDoubleTap = nil
+            self.mindGramTripleTapActive = true
+        }
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
         self.view.isExclusiveTouch = true
@@ -5850,10 +5859,74 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         super.animateFrameTransition(progress, currentValue)
     }
     
+    // MindGram: double and triple tap actions («Чат и перевод»).
+    private var mindGramPendingDoubleTap: DispatchWorkItem?
+    private var mindGramTripleTapActive = false
+
+    private func mindGramHandleTap(gesture: TapLongTapOrDoubleTapGesture, item: ChatMessageItem) -> Bool {
+        if case .tap = gesture, self.mindGramTripleTapActive {
+            self.mindGramTripleTapActive = false
+            self.mindGramPerform(MindGramTapAction.tripleTap, item: item)
+            return true
+        }
+        self.mindGramTripleTapActive = false
+        guard case .doubleTap = gesture else {
+            return false
+        }
+        let doubleAction = MindGramTapAction.doubleTap
+        let tripleAction = MindGramTapAction.tripleTap
+        if doubleAction == .reaction && tripleAction == .nothing {
+            return false
+        }
+        self.mainContainerNode.cancelGesture()
+        if tripleAction == .nothing {
+            self.mindGramPerform(doubleAction, item: item)
+        } else {
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, let item = self.item else {
+                    return
+                }
+                self.mindGramPendingDoubleTap = nil
+                self.mindGramPerform(doubleAction, item: item)
+            }
+            self.mindGramPendingDoubleTap?.cancel()
+            self.mindGramPendingDoubleTap = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+        }
+        return true
+    }
+
+    private func mindGramPerform(_ action: MindGramTapAction, item: ChatMessageItem) {
+        let message = item.message
+        switch action {
+        case .reaction:
+            if canAddMessageReactions(message: EngineMessage(message)) {
+                item.controllerInteraction.updateMessageReaction(message, .default, false, nil)
+            }
+        case .reply:
+            item.controllerInteraction.setupReply(message.id)
+        case .copy:
+            if !message.text.isEmpty {
+                item.controllerInteraction.copyText(message.text)
+            }
+        case .translate:
+            if !message.text.isEmpty {
+                item.controllerInteraction.performTextSelectionAction(message, true, NSAttributedString(string: message.text), nil, .translate)
+            }
+        case .menu:
+            item.controllerInteraction.openMessageContextMenu(message, false, self, self.bounds, nil, nil)
+        case .nothing:
+            break
+        }
+    }
+
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let item = self.item {
+                if self.mindGramHandleTap(gesture: gesture, item: item) {
+                    return
+                }
                 if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
                     if case .doubleTap = gesture {
                         self.mainContainerNode.cancelGesture()

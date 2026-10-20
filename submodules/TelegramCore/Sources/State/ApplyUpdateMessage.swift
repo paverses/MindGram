@@ -436,6 +436,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             return .update(updatedMessageValue)
         })
         if let updatedMessage = updatedMessage, case let .Id(updatedId) = updatedMessage.id {
+            // MindGram: self-destruct timer for own messages.
+            mindGramScheduleSelfDestruct(transaction: transaction, id: updatedId)
             if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
                 if let threadId = updatedMessage.threadId {
                     if let authorId = updatedMessage.authorId {
@@ -593,6 +595,10 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         }
         
         for (message, _, updatedMessage) in mapping {
+            // MindGram: self-destruct timer for own messages (albums).
+            if case let .Id(id) = updatedMessage.id {
+                mindGramScheduleSelfDestruct(transaction: transaction, id: id)
+            }
             transaction.updateMessage(message.id, update: { currentMessage in
                 let updatedId: MessageId
                 if case let .Id(id) = updatedMessage.id {

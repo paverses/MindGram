@@ -179,7 +179,8 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         self.closeButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize)
         
-        if info.isPremium {
+        // MindGram: the full panel (language menu) without Premium.
+        if info.isPremium || MindGramTranslator.unlocksChatTranslation {
             self.moreButton.isHidden = false
             self.closeButton.isHidden = true
         } else {
@@ -213,7 +214,8 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         }
         let isPremium = info.isPremium
         
-        var translationAvailable = isPremium
+        // MindGram: chat translation without Premium («Чат и перевод»).
+        var translationAvailable = isPremium || MindGramTranslator.unlocksChatTranslation
         if case let .channel(channel) = info.peer, channel.flags.contains(.autoTranslateEnabled) {
             translationAvailable = true
         }
@@ -232,7 +234,8 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         
         let isPremium = info.isPremium
         
-        var translationAvailable = isPremium
+        // MindGram: chat translation without Premium («Чат и перевод»).
+        var translationAvailable = isPremium || MindGramTranslator.unlocksChatTranslation
         if case let .channel(channel) = info.peer, channel.flags.contains(.autoTranslateEnabled) {
             translationAvailable = true
         }

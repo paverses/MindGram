@@ -17,6 +17,7 @@ swift_library(
         "//submodules/Postbox",
         "//submodules/TelegramCore",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/Media/LocalAudioTranscription",
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",
         "//submodules/RadialStatusNode",

@@ -54,9 +54,11 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
     }, open: { id in
         switch GhostRow(rawValue: id) {
         case .chats:
-            pushImpl?(mindGramGhostPeersController(context: context, kind: .ghostChats))
+            let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
+            pushImpl?(mindGramPeersListController(context: context, title: strings.ghostChats, footer: strings.ghostChatsFooter, get: { MindGramGhost.ghostChats }, set: { MindGramGhost.ghostChats = $0 }))
         case .exceptions:
-            pushImpl?(mindGramGhostPeersController(context: context, kind: .exceptions))
+            let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
+            pushImpl?(mindGramPeersListController(context: context, title: strings.ghostExceptions, footer: strings.ghostExceptionsFooter, get: { MindGramGhost.exceptions }, set: { MindGramGhost.exceptions = $0 }))
         default:
             break
         }
@@ -97,122 +99,3 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
     return controller
 }
 
-private enum GhostPeersKind {
-    case ghostChats
-    case exceptions
-
-    var peerIds: Set<Int64> {
-        switch self {
-        case .ghostChats:
-            return MindGramGhost.ghostChats
-        case .exceptions:
-            return MindGramGhost.exceptions
-        }
-    }
-
-    func update(_ f: (inout Set<Int64>) -> Void) {
-        var value = self.peerIds
-        f(&value)
-        switch self {
-        case .ghostChats:
-            MindGramGhost.ghostChats = value
-        case .exceptions:
-            MindGramGhost.exceptions = value
-        }
-    }
-}
-
-/// «Чаты с призраком» and «Исключения»: a list of chats with "Add Chat" on top; swipe a chat to remove it.
-private func mindGramGhostPeersController(context: AccountContext, kind: GhostPeersKind) -> ViewController {
-    var pushImpl: ((ViewController) -> Void)?
-    var peers: [EnginePeer] = []
-    var revealedPeerId: EnginePeer.Id?
-    let revealedUpdated = ValuePromise<Int>(0, ignoreRepeated: true)
-    var revealRevision = 0
-
-    let addChat = {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let strings = MindGramStrings(presentationData)
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeRecent, .doNotSearchMessages, .removeSearchHeader], hasContactSelector: false, title: strings.ghostAddChat))
-        controller.peerSelected = { [weak controller] peer, _ in
-            kind.update { _ = $0.insert(peer.id.toInt64()) }
-            controller?.dismiss()
-        }
-        pushImpl?(controller)
-    }
-
-    let arguments = MindGramListArguments(customItem: { key, presentationData, section in
-        if key == "add" {
-            return ItemListPeerActionItem(presentationData: presentationData, systemStyle: .glass, icon: PresentationResourcesItemList.plusIconImage(presentationData.theme), title: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).ghostAddChat, sectionId: section, height: .compactPeerList, editing: false, action: {
-                addChat()
-            })
-        }
-        guard key.hasPrefix("peer:"), let value = Int64(key.dropFirst(5)), let peer = peers.first(where: { $0.id.toInt64() == value }) else {
-            return ItemListTextItem(presentationData: presentationData, text: .plain(""), sectionId: section)
-        }
-        return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: context, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealedPeerId == peer.id), switchValue: nil, enabled: true, selectable: false, sectionId: section, action: nil, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
-            if !((peerId == nil && fromPeerId == revealedPeerId) || (peerId != nil && fromPeerId == nil)) {
-                return
-            }
-            revealedPeerId = peerId
-            revealRevision += 1
-            revealedUpdated.set(revealRevision)
-        }, removePeer: { peerId in
-            revealedPeerId = nil
-            kind.update { _ = $0.remove(peerId.toInt64()) }
-        })
-    })
-
-    let peersSignal: Signal<Void, NoError> = mindGramSettingsUpdated()
-    |> map { _ -> [Int64] in
-        return kind.peerIds.sorted()
-    }
-    |> distinctUntilChanged
-    |> mapToSignal { ids -> Signal<[EnginePeer], NoError> in
-        return context.engine.data.get(EngineDataMap(
-            ids.map { TelegramEngine.EngineData.Item.Peer.Peer(id: EnginePeer.Id($0)) }
-        ))
-        |> map { result -> [EnginePeer] in
-            return ids.compactMap { id -> EnginePeer? in
-                if let peer = result[EnginePeer.Id(id)] {
-                    return peer
-                }
-                return nil
-            }
-        }
-    }
-    |> deliverOnMainQueue
-    |> map { result -> Void in
-        peers = result
-        return Void()
-    }
-
-    let controller = mindGramListController(context: context, title: { strings in
-        switch kind {
-        case .ghostChats:
-            return strings.ghostChats
-        case .exceptions:
-            return strings.ghostExceptions
-        }
-    }, arguments: arguments, extraUpdates: combineLatest(peersSignal, revealedUpdated.get()) |> map { _ in Void() }, entries: { _, strings in
-        var entries: [MindGramListEntry] = []
-        entries.append(.custom(id: 0, section: 0, key: "add", revision: 0))
-        for (index, peer) in peers.enumerated() {
-            let revealed = revealedPeerId == peer.id ? 1 : 0
-            entries.append(.custom(id: 1 + Int32(index), section: 0, key: "peer:\(peer.id.toInt64())", revision: revealed))
-        }
-        let footer: String
-        switch kind {
-        case .ghostChats:
-            footer = strings.ghostChatsFooter
-        case .exceptions:
-            footer = strings.ghostExceptionsFooter
-        }
-        entries.append(.footer(id: 100000, section: 0, text: footer))
-        return entries
-    })
-    pushImpl = { [weak controller] c in
-        controller?.push(c)
-    }
-    return controller
-}

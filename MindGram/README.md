@@ -13,6 +13,14 @@ below), so updating to a new Telegram version stays simple.
 | `Appearance/` | **Оформление** (Appearance): the "Старый дизайн Telegram" (Classic Telegram Design) switch and the restart toast. |
 | `Tabs/` | **Вкладки** (Tabs): which tabs the bottom bar shows. |
 | `Profile/` | **Профиль** (Profile): profile features (empty for now). |
+| `Ghost/` | `MindGramGhost` module (Foundation only): ghost mode switches and `MindGramLog`, the report journal. TelegramCore uses it. |
+| `GhostMode/` | **Режим призрака** screen. |
+| `Messages/` | `MindGramMessages` module (Foundation only): stores and settings for deleted messages, edit history, self-destruct, tap actions, transcription. |
+| `Translator/` | `MindGramTranslator` module (Foundation only): Google and Microsoft translators and translation settings. |
+| `CoreHooks/` | Swift files compiled **into TelegramCore** (a filegroup in `submodules/TelegramCore/BUILD`), for hooks that need its internals: keeping deleted messages, edits, self-destruct, translation routing. |
+| `RoundVideo/` | `MindGramRoundVideo` module: Core Image + Vision effects and masks for round videos. |
+| `Deleted/`, `ChatTools/`, `Circles/` | **Удалённые и правки**, **Чат и перевод**, **Кружки** screens. |
+| `Report/` | **Отчёт**: what works, errors with file:line, copy or send as .txt. |
 | `Branding/` | Logo (`logo.svg`), app icon (`AppIcon.icon`), intro screen images (`intro/`). |
 | `Bot/` | Private Telegram bot that hands out the builds (`@updateIPA_rabot`, server `/opt/mindgram-bot`). See `Bot/README.md`. |
 | `scripts/` | `apply-branding.sh`, `sync-upstream.sh`, `render-logo.ps1`. |
@@ -109,5 +117,12 @@ screens are built with the shared list engine in `Settings/MindGramList.swift`.
 | Classic system controls (switches, buttons, alerts before iOS 26) | Оформление | `Telegram/Telegram-iOS/main.m` sets `UIDesignRequiresCompatibility` in the in-memory Info.plist before `UIApplicationMain` |
 | Ghost mode: read receipts, online, typing, recording/uploading, listening, stories | Режим призрака | `Ghost/` module (`MindGramGhost`, Foundation only) used by TelegramCore: `SynchronizePeerReadState.swift` (`pushPeerReadState`, `validatePeerReadState`, `mindGramSendReadReceipt`), `ApplyMaxReadIndexInteractively.swift`, `ReplyThreadHistory.swift`, `ManagedAccountPresence.swift`, `ManagedLocalInputActivities.swift`, `ManagedSynchronizeConsumeMessageContentsOperations.swift`, `ManagedSynchronizeViewStoriesOperations.swift`, `Stories.swift`; `TelegramCore/BUILD` dep |
 | Ghost button in the chat list, "Send Read Receipt" | Режим призрака | `ChatListUI/Sources/ChatListController.swift` (`mindGramShowsGhostButton`), `ChatListUI/Sources/ChatContextMenus.swift` |
+| Keep deleted messages, mark them, history | Удалённые и правки | `CoreHooks/MindGramMessageHooks.swift` called from `AccountStateManagementUtils.swift` (`.DeleteMessages`, `.DeleteMessagesWithGlobalIds`), `HistoryViewStateValidation.swift`, `ProcessSecretChatIncomingDecryptedOperations.swift`; the mark in `ChatMessageDateAndStatusNode/Sources/StringForMessageTimestampStatus.swift` |
+| Edit history | Удалённые и правки | `AccountStateManagementUtils.swift` (`.EditMessage`), menu item in `TelegramUI/Sources/ChatInterfaceStateContextMenus.swift` |
+| Translator choice, chat translation without Premium, auto-translate, own messages | Чат и перевод | `CoreHooks/MindGramTranslateHooks.swift` called from `TelegramEngine/Messages/Translate.swift` and `PendingMessages/EnqueueMessage.swift`; `TranslateUI` (`canTranslateChats`, `chatTranslationState`), `ChatControllerContentData.swift`, `ChatHistoryListNode.swift`, `ChatTranslationPanelNode.swift` |
+| Self-destructing own messages with a countdown | Чат и перевод | `ApplyUpdateMessage.swift` (schedule), `Account/Account.swift` (`mindGramManagedSelfDestruct`), countdown in `StringForMessageTimestampStatus.swift` |
+| Double and triple tap | Чат и перевод | `ChatMessageBubbleItemNode.swift` (`mindGramHandleTap`), `Display/Source/TapLongTapOrDoubleTapGestureRecognizer.swift` (`mindGramTripleTapBegan`) |
+| Voice and round message transcription on the device | Чат и перевод | `ChatMessageInteractiveFileNode.swift`, `ChatMessageInteractiveInstantVideoNode.swift` |
+| Round video effects and masks | Кружки | `Camera/CameraNeo/Sources/CameraNeo.swift` (live frames), `VideoRecorder.swift` (recorded frames), `VideoMessageCameraScreen.swift` (circle overlay, swipes) |
 | Report: what works, errors with file:line, copy / send as .txt | Отчёт | `Ghost/Sources/MindGramLog.swift` (journal), `Core/MindGramLaunchTrace.swift` (last crash), `Display/Source/WindowContent.swift` (`mindGramDeviceMetrics`, `mindGramBadgeForceHidden`), `main.m` (`MindGram.classicDesignError`) |
 | App icons (regular, inverted, Graphite, Paper, Midnight, Sage) and their names | Telegram's Appearance | `AppDelegate.swift`, `ThemeSettingsAppIconItem.swift` (names from `MindGramBranding.iconTitle`), `Telegram/BUILD` (`alternate_icon_folders`), icons in `Branding/AlternateIcons` |

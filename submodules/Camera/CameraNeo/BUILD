@@ -60,6 +60,7 @@ swift_library(
         "//submodules/Utils/DeviceModel",
         "//submodules/LottieBinding:LottieBinding",
         "//submodules/LottieSettings:LottieSettings",
+        "//MindGram/RoundVideo:MindGramRoundVideo",
     ],
     visibility = [
         "//visibility:public",

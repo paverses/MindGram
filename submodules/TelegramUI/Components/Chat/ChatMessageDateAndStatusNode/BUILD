@@ -15,6 +15,7 @@ swift_library(
         "//submodules/AsyncDisplayKit",
         "//submodules/TelegramCore",
         "//submodules/Display",
+        "//MindGram/Core:MindGramCore",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramPresentationData",

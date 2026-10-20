@@ -30,6 +30,7 @@ import ChatControllerInteraction
 import WallpaperBackgroundNode
 import TelegramStringFormatting
 import InvisibleInkDustNode
+import LocalAudioTranscription
 
 public struct ChatMessageInstantVideoItemLayoutResult {
     public let contentSize: CGSize
@@ -623,7 +624,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             let currentTime = Int32(Date().timeIntervalSince1970)
-            if transcribedText == nil, let cooldownUntilTime = item.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
+            if transcribedText == nil, !MindGramTranscription.usesLocal(isPremium: item.associatedData.isPremium), let cooldownUntilTime = item.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
                 updatedAudioTranscriptionState = .locked
             }
             
@@ -829,7 +830,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     var displayTranscribe = false
                     if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free && !isViewOnceMessage && !item.presentationData.isPreview {
                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
-                        if item.associatedData.isPremium || item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                        // MindGram: on-device transcription without Premium.
+                        if item.associatedData.isPremium || item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost || MindGramTranscription.isEnabled {
                             displayTranscribe = true
                         } else if premiumConfiguration.audioTransciptionTrialCount > 0 {
                             if incoming {
@@ -1821,7 +1823,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = transcribedText(message: EngineMessage(item.message))
-        if transcriptionText == nil && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+        // MindGram: on-device transcription needs no Premium and has no trial limits.
+        let mindGramLocalTranscription = MindGramTranscription.usesLocal(isPremium: item.associatedData.isPremium)
+        if transcriptionText == nil && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost && !mindGramLocalTranscription {
             if premiumConfiguration.audioTransciptionTrialCount > 0 {
                 if !item.associatedData.isPremium {
                     if self.presentAudioTranscriptionTooltip(finished: false) {
@@ -1880,7 +1884,35 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if self.transcribeDisposable == nil {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
-                
+
+                // MindGram: transcribe the round video's sound on the device.
+                if mindGramLocalTranscription, let file = item.message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
+                    let context = item.context
+                    let messageId = item.message.id
+                    let appLocale = presentationData.strings.baseLanguageCode
+                    let signal: Signal<LocallyTranscribedAudio?, NoError> = context.engine.resources.data(id: EngineMediaResource.Id(file.resource.id))
+                    |> filter { $0.isComplete }
+                    |> take(1)
+                    |> mapToSignal { data -> Signal<LocallyTranscribedAudio?, NoError> in
+                        return transcribeAudio(path: data.path, appLocale: appLocale)
+                    }
+                    self.transcribeDisposable = (signal
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        if let result {
+                            let _ = context.engine.messages.storeLocallyTranscribedAudio(messageId: messageId, text: result.text, isFinal: result.isFinal, error: nil).startStandalone()
+                        } else {
+                            MindGramLog.error("Расшифровка", "Кружок \(messageId.id): распознавание речи iOS ничего не вернуло (нет разрешения или языка на устройстве)")
+                            self.audioTranscriptionState = .collapsed
+                            self.requestUpdateLayout(true)
+                        }
+                    }, completed: { [weak self] in
+                        self?.transcribeDisposable?.dispose()
+                        self?.transcribeDisposable = nil
+                    })
+                } else {
                 self.transcribeDisposable = (item.context.engine.messages.transcribeAudio(messageId: item.message.id)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                     guard let strongSelf = self else {
@@ -1888,13 +1920,14 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     strongSelf.transcribeDisposable?.dispose()
                     strongSelf.transcribeDisposable = nil
-                    
+
                     if let item = strongSelf.item, !item.associatedData.isPremium && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
                         Queue.mainQueue().after(0.1, {
                             let _ = strongSelf.presentAudioTranscriptionTooltip(finished: true)
                         })
                     }
                 })
+                }
             }
         }
         

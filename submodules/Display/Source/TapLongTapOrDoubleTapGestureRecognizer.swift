@@ -92,6 +92,8 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     public private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
     
     public var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
+    /// MindGram: called when a third quick tap begins (UITouch.tapCount 3), for triple-tap actions.
+    public var mindGramTripleTapBegan: (() -> Void)?
     public var longTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
     public var secondaryTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
     
@@ -180,6 +182,9 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         self.lastRecognizedGestureAndLocation = nil
+        if let mindGramTripleTapBegan = self.mindGramTripleTapBegan, touches.contains(where: { $0.tapCount >= 3 }) {
+            mindGramTripleTapBegan()
+        }
         
         super.touchesBegan(touches, with: event)
         

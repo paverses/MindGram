@@ -6,6 +6,7 @@ import TelegramStringFormatting
 import TextFormat
 import LocalizedPeerData
 import AccountContext
+import MindGramCore
 
 public enum MessageTimestampStatusFormat {
     case full
@@ -250,6 +251,18 @@ public func stringForMessageTimestampStatus(
             dateText = "\(authorTitle), \(dateText)"
         }
     }
-    
+
+    // MindGram: the mark of a kept deleted message and the self-destruct countdown.
+    let mindGramKey = MindGramMessageKey(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, id: message.id.id)
+    let mindGramIsRussian = ["ru", "uk", "be"].contains(where: { strings.baseLanguageCode.hasPrefix($0) })
+    if MindGramDeleted.isDeleted(mindGramKey) {
+        let prefix = MindGramDeleted.timestampPrefix(isRussian: mindGramIsRussian)
+        if !prefix.isEmpty {
+            dateText = "\(prefix) \(dateText)"
+        }
+    } else if MindGramSelfDestruct.showsCountdown, let deadline = MindGramSelfDestruct.deadline(mindGramKey) {
+        dateText = "\(MindGramSelfDestruct.countdownText(deadline: deadline, isRussian: mindGramIsRussian)) \(dateText)"
+    }
+
     return dateText
 }

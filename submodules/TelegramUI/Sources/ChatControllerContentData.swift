@@ -2220,7 +2220,8 @@ extension ChatControllerImpl {
                         if counterAndTimestamp.0 >= 3 {
                             maybeSuggestPremium = true
                         }
-                        if (isPremium || maybeSuggestPremium || hasAutoTranslate) && !isHidden {
+                        // MindGram: chat translation without Premium («Чат и перевод»).
+                        if (isPremium || maybeSuggestPremium || hasAutoTranslate || MindGramTranslator.unlocksChatTranslation || MindGramTranslator.autoTranslates(peerId: peerId.toInt64())) && !isHidden {
                             return chatTranslationState(context: context, peerId: peerId, threadId: chatLocation.threadId)
                             |> map { translationState -> ChatPresentationTranslationState? in
                                 if let translationState, !translationState.fromLang.isEmpty && (translationState.fromLang != baseLanguageCode || translationState.isEnabled) {

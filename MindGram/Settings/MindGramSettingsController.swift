@@ -17,8 +17,11 @@ private enum MindGramMenuItem: Int32 {
     case liquidGlass = 3
     case menuSections = 4
     case ghost = 5
-    case report = 6
-    case footer = 7
+    case deleted = 6
+    case chatTools = 7
+    case circles = 8
+    case report = 9
+    case footer = 10
 }
 
 /// The "MindGram" screen opened from Settings: one row per MindGram section.
@@ -42,6 +45,12 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             pushImpl?(mindGramMenuSectionsController(context: context))
         case .ghost:
             pushImpl?(mindGramGhostController(context: context))
+        case .deleted:
+            pushImpl?(mindGramDeletedController(context: context))
+        case .chatTools:
+            pushImpl?(mindGramChatToolsController(context: context))
+        case .circles:
+            pushImpl?(mindGramCirclesController(context: context))
         case .report:
             pushImpl?(mindGramReportController(context: context))
         case .footer:
@@ -61,6 +70,12 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             return PresentationResourcesSettings.settings
         case "ghost":
             return PresentationResourcesSettings.security
+        case "deleted":
+            return PresentationResourcesSettings.savedMessages
+        case "chatTools":
+            return PresentationResourcesSettings.language
+        case "circles":
+            return PresentationResourcesSettings.videos
         case "report":
             return PresentationResourcesSettings.dataUsage
         default:
@@ -77,6 +92,9 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             .disclosure(id: MindGramMenuItem.liquidGlass.rawValue, section: section, title: strings.liquidGlass, icon: "glass"),
             .disclosure(id: MindGramMenuItem.menuSections.rawValue, section: section, title: strings.menuSections, icon: "menu"),
             .disclosure(id: MindGramMenuItem.ghost.rawValue, section: section, title: strings.ghostMode, icon: "ghost"),
+            .disclosure(id: MindGramMenuItem.deleted.rawValue, section: section, title: strings.t("Удалённые и правки", "Deleted & Edited"), icon: "deleted"),
+            .disclosure(id: MindGramMenuItem.chatTools.rawValue, section: section, title: strings.t("Чат и перевод", "Chat & Translation"), icon: "chatTools"),
+            .disclosure(id: MindGramMenuItem.circles.rawValue, section: section, title: strings.t("Кружки", "Round Videos"), icon: "circles"),
             .disclosure(id: MindGramMenuItem.report.rawValue, section: section, title: strings.report, icon: "report"),
             .footer(id: MindGramMenuItem.footer.rawValue, section: section, text: strings.menuFooter)
         ]

@@ -7,13 +7,17 @@ swift_library(
     module_name = "TelegramCore",
     srcs = glob([
         "Sources/**/*.swift",
-    ]),
+    ]) + [
+        "//MindGram/CoreHooks:Sources",
+    ],
     copts = [
         "-warnings-as-errors",
     ],
     deps = [
         "//submodules/TelegramApi:TelegramApi",
         "//MindGram/Ghost:MindGramGhost",
+        "//MindGram/Messages:MindGramMessages",
+        "//MindGram/Translator:MindGramTranslator",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/MediaPreuploadRegistry:MediaPreuploadRegistry",
         "//submodules/WebProxyTransport:WebProxyTransport",

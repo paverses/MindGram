@@ -8,6 +8,9 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 #   Glass/         Liquid Glass
 #   MenuSections/  Разделы меню
 #   GhostMode/     Режим призрака
+#   Deleted/       Удалённые и правки (deleted messages, edit history)
+#   ChatTools/     Чат и перевод (translation, self-destruct, taps, transcription)
+#   Circles/       Кружки (round video effects; the engine is the RoundVideo module)
 #   Report/        Отчёт (what works, errors, export)
 swift_library(
     name = "MindGramUI",
@@ -20,6 +23,9 @@ swift_library(
         "Glass/**/*.swift",
         "MenuSections/**/*.swift",
         "GhostMode/**/*.swift",
+        "Deleted/**/*.swift",
+        "ChatTools/**/*.swift",
+        "Circles/**/*.swift",
         "Report/**/*.swift",
     ]),
     copts = [

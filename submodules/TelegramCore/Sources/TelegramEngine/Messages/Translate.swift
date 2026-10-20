@@ -30,6 +30,10 @@ public enum TranslationTone: String {
 }
 
 func _internal_translate(network: Network, text: String, toLang: String, entities: [MessageTextEntity] = [], tone: TranslationTone = .neutral, peer: Api.InputPeer? = nil, messageId: Int32? = nil) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+    // MindGram: the translator chosen in «Чат и перевод».
+    if !text.isEmpty, let signal = mindGramTranslate(text: text, toLang: toLang) {
+        return signal
+    }
     var flags: Int32 = 0
 
     if tone != .neutral {
@@ -172,6 +176,10 @@ func _internal_composeRichMessageWithAI(account: Account, instantPage: InstantPa
 }
 
 func _internal_translateTexts(network: Network, texts: [(String, [MessageTextEntity])], toLang: String, tone: TranslationTone = .neutral) -> Signal<[(String, [MessageTextEntity])], TranslationError> {
+    // MindGram: the translator chosen in «Чат и перевод».
+    if let signal = mindGramTranslateTexts(texts, toLang: toLang) {
+        return signal
+    }
     var flags: Int32 = 0
     flags |= (1 << 1)
     
@@ -345,7 +353,10 @@ private func _internal_translateMessagesByPeerId(account: Account, peerId: Engin
         if id.isEmpty {
             msgs = .single(nil)
         } else {
-            if enableLocalIfPossible, let engineExperimentalInternalTranslationService, let fromLang {
+            // MindGram: the translator chosen in «Чат и перевод».
+            if let mindGramSignal = mindGramTranslateMessages(postbox: account.postbox, messageIds: plainMessageIds, fromLang: fromLang, toLang: toLang) {
+                msgs = mindGramSignal
+            } else if enableLocalIfPossible, let engineExperimentalInternalTranslationService, let fromLang {
                 msgs = account.postbox.transaction { transaction -> [MessageId: String] in
                     var texts: [MessageId: String] = [:]
                     for messageId in plainMessageIds {

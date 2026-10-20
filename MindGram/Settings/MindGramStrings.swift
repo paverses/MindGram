@@ -11,7 +11,7 @@ public struct MindGramStrings {
         self.isRussian = languageCode.hasPrefix("ru") || languageCode.hasPrefix("uk") || languageCode.hasPrefix("be")
     }
 
-    private func t(_ ru: String, _ en: String) -> String {
+    func t(_ ru: String, _ en: String) -> String {
         return self.isRussian ? ru : en
     }
 

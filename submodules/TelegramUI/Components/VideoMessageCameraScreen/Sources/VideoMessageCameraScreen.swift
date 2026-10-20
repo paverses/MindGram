@@ -1008,6 +1008,21 @@ public class VideoMessageCameraScreen: ViewController {
             if isDualCameraEnabled {
                 self.previewContainerContentView.addSubview(self.additionalPreviewView)
             }
+            // MindGram: the circle with the round video effect, above the camera.
+            self.mindGramEffectView.contentMode = .scaleAspectFill
+            self.mindGramEffectView.clipsToBounds = true
+            self.mindGramEffectView.isUserInteractionEnabled = false
+            self.mindGramEffectView.isHidden = true
+            self.previewContainerContentView.addSubview(self.mindGramEffectView)
+            self.mindGramEffectLabel.font = UIFont.systemFont(ofSize: 15.0, weight: .semibold)
+            self.mindGramEffectLabel.textColor = .white
+            self.mindGramEffectLabel.textAlignment = .center
+            self.mindGramEffectLabel.layer.shadowColor = UIColor.black.cgColor
+            self.mindGramEffectLabel.layer.shadowOpacity = 0.6
+            self.mindGramEffectLabel.layer.shadowRadius = 4.0
+            self.mindGramEffectLabel.layer.shadowOffset = .zero
+            self.mindGramEffectLabel.alpha = 0.0
+            self.previewContainerContentView.addSubview(self.mindGramEffectLabel)
             self.previewContainerContentView.addSubview(self.progressView)
             self.previewContainerContentView.addSubview(self.previewBlurView)
             self.previewContainerContentView.addSubview(self.loadingView)
@@ -1038,6 +1053,27 @@ public class VideoMessageCameraScreen: ViewController {
             self.cameraStateDisposable?.dispose()
             self.idleTimerExtensionDisposable.dispose()
             self.backgroundView.removeFromSuperview()
+            MindGramRoundVideo.setPreviewSink(nil)
+        }
+
+        // MindGram: round video effects (MindGram/RoundVideo).
+        private let mindGramEffectView = UIImageView()
+        private let mindGramEffectLabel = UILabel()
+
+        @objc private func mindGramSwipe(_ recognizer: UISwipeGestureRecognizer) {
+            guard self.previewState == nil else {
+                return
+            }
+            let effect = MindGramRoundVideo.cycle(forward: recognizer.direction == .left)
+            let languageCode = self.presentationData.strings.baseLanguageCode
+            let isRussian = ["ru", "uk", "be"].contains(where: { languageCode.hasPrefix($0) })
+            self.mindGramEffectLabel.text = effect.title(isRussian: isRussian)
+            self.mindGramEffectLabel.layer.removeAllAnimations()
+            self.mindGramEffectLabel.alpha = 1.0
+            UIView.animate(withDuration: 0.3, delay: 1.0, options: [.beginFromCurrentState], animations: {
+                self.mindGramEffectLabel.alpha = 0.0
+            })
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
         
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
@@ -1075,6 +1111,23 @@ public class VideoMessageCameraScreen: ViewController {
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
             self.view.addGestureRecognizer(pinchGestureRecognizer)
+
+            // MindGram: round video effects — the live circle, and swipes to switch.
+            MindGramRoundVideo.resetCurrent()
+            MindGramRoundVideo.setPreviewSink({ [weak self] image in
+                guard let self else {
+                    return
+                }
+                self.mindGramEffectView.image = image
+                self.mindGramEffectView.isHidden = image == nil || self.previewState != nil
+            })
+            if MindGramRoundVideo.isEnabled && MindGramRoundVideo.swipeToSwitch {
+                for direction in [UISwipeGestureRecognizer.Direction.left, .right] {
+                    let swipe = UISwipeGestureRecognizer(target: self, action: #selector(self.mindGramSwipe(_:)))
+                    swipe.direction = direction
+                    self.previewContainerView.addGestureRecognizer(swipe)
+                }
+            }
         }
                 
         fileprivate func setupCamera() {
@@ -1589,6 +1642,13 @@ public class VideoMessageCameraScreen: ViewController {
             
             self.progressView.frame = previewBounds
             self.progressView.value = CGFloat(self.cameraState.duration / 60.0)
+
+            // MindGram: round video effects.
+            self.mindGramEffectView.frame = previewBounds
+            if self.previewState != nil {
+                self.mindGramEffectView.isHidden = true
+            }
+            self.mindGramEffectLabel.frame = CGRect(x: 0.0, y: previewBounds.height * 0.72, width: previewBounds.width, height: 24.0)
             
             transition.setAlpha(view: self.additionalPreviewView, alpha: self.cameraState.position == .front ? 1.0 : 0.0)
             

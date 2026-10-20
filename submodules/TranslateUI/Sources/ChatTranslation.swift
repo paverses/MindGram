@@ -4,6 +4,7 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 import TelegramUIPreferences
+import MindGramCore
 
 public struct ChatTranslationState: Codable {
     enum CodingKeys: String, CodingKey {
@@ -234,7 +235,9 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
             context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AutoTranslateEnabled(id: peerId))
         )
         |> mapToSignal { settings, autoTranslateEnabled in
-            if !settings.translateChats && !autoTranslateEnabled {
+            // MindGram: chats from «Автоперевод» translate without the setting.
+            let mindGramAuto = MindGramTranslator.autoTranslates(peerId: peerId.toInt64())
+            if !settings.translateChats && !autoTranslateEnabled && !mindGramAuto {
                 return .single(nil)
             }
             
@@ -253,7 +256,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 if let cached, let timestamp = cached.timestamp, cached.baseLang == baseLang && currentTime - timestamp < 60 * 60 {
                     if !dontTranslateLanguages.contains(cached.fromLang) {
-                        return .single(cached)
+                        return .single(mindGramAuto ? cached.withIsEnabled(true) : cached)
                     } else {
                         return .single(nil)
                     }
@@ -349,7 +352,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id,
                             let isEnabled: Bool
                             if let currentIsEnabled = cached?.isEnabled {
                                 isEnabled = currentIsEnabled
-                            } else if autoTranslateEnabled {
+                            } else if autoTranslateEnabled || mindGramAuto {
                                 isEnabled = true
                             } else {
                                 isEnabled = false

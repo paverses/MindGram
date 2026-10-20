@@ -186,7 +186,8 @@ public func canTranslateChats(context: AccountContext) -> Bool {
     default:
         break
     }
-    return chatTranslationAvailable
+    // MindGram: Google and Microsoft translate whole chats on any iOS.
+    return chatTranslationAvailable || (MindGramTranslator.usesExternalProvider && MindGramTranslator.provider != .apple)
 }
 
 public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, showTranslateIfTopical: Bool = false, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {

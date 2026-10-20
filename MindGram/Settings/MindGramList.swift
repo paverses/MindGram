@@ -29,17 +29,23 @@ enum MindGramListEntry: ItemListNodeEntry {
     case action(id: Int32, section: ItemListSectionId, title: String)
     /// Multiline text: plain words, or monospaced code such as an error with its place in the code.
     case text(id: Int32, section: ItemListSectionId, text: String, monospace: Bool)
+    /// A choice with a checkmark; tapping calls `open`.
+    case check(id: Int32, section: ItemListSectionId, title: String, checked: Bool)
+    /// A title with the current value on the right and an arrow; tapping calls `open`.
+    case value(id: Int32, section: ItemListSectionId, title: String, value: String)
+    /// A title with a few lines of detail under it (history rows); tapping calls `open`.
+    case detail(id: Int32, section: ItemListSectionId, title: String, detail: String)
 
     var section: ItemListSectionId {
         switch self {
-        case let .header(_, section, _), let .toggle(_, section, _, _, _), let .disclosure(_, section, _, _), let .footer(_, section, _), let .custom(_, section, _, _), let .status(_, section, _, _, _), let .action(_, section, _), let .text(_, section, _, _):
+        case let .header(_, section, _), let .toggle(_, section, _, _, _), let .disclosure(_, section, _, _), let .footer(_, section, _), let .custom(_, section, _, _), let .status(_, section, _, _, _), let .action(_, section, _), let .text(_, section, _, _), let .check(_, section, _, _), let .value(_, section, _, _), let .detail(_, section, _, _):
             return section
         }
     }
 
     var stableId: Int32 {
         switch self {
-        case let .header(id, _, _), let .toggle(id, _, _, _, _), let .disclosure(id, _, _, _), let .footer(id, _, _), let .custom(id, _, _, _), let .status(id, _, _, _, _), let .action(id, _, _), let .text(id, _, _, _):
+        case let .header(id, _, _), let .toggle(id, _, _, _, _), let .disclosure(id, _, _, _), let .footer(id, _, _), let .custom(id, _, _, _), let .status(id, _, _, _, _), let .action(id, _, _), let .text(id, _, _, _), let .check(id, _, _, _), let .value(id, _, _, _), let .detail(id, _, _, _):
             return id
         }
     }
@@ -84,6 +90,18 @@ enum MindGramListEntry: ItemListNodeEntry {
             })
         case let .text(_, section, text, monospace):
             return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], font: monospace ? .monospace : .default, sectionId: section, style: .blocks)
+        case let .check(id, section, title, checked):
+            return ItemListCheckboxItem(presentationData: presentationData, systemStyle: .glass, title: title, style: .left, checked: checked, zeroSeparatorInsets: false, sectionId: section, action: {
+                arguments.open(id)
+            })
+        case let .value(id, section, title, value):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: value, sectionId: section, style: .blocks, action: {
+                arguments.open(id)
+            })
+        case let .detail(id, section, title, detail):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, title: title, label: detail, labelStyle: .multilineDetailText, sectionId: section, style: .blocks, disclosureStyle: .none, action: {
+                arguments.open(id)
+            })
         }
     }
 }

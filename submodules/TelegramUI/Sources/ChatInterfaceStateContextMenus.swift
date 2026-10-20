@@ -39,6 +39,7 @@ import ChatMessageBubbleItemNode
 import AdsInfoScreen
 import AdsReportScreen
 import WalletContext
+import MindGramUI
  
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -1347,6 +1348,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        // MindGram: «История правок» (MindGram/Messages).
+        let mindGramVersions = MindGramEdits.versions(MindGramMessageKey(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, id: message.id.id))
+        if !mindGramVersions.isEmpty {
+            let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
+            actions.append(.action(ContextMenuActionItem(text: isRussian ? "История правок (\(mindGramVersions.count))" : "Edit History (\(mindGramVersions.count))", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.default)
+                controllerInteraction.navigationController()?.pushViewController(mindGramEditHistoryController(context: context, versions: mindGramVersions, currentText: message.text), animated: true)
+            })))
+        }
+
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || richMessageMarkdown != nil || (resourceAvailable && isImage) || diceEmoji != nil {
             if !isExpired {
