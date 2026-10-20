@@ -68,6 +68,10 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             MindGramTranscription.isEnabled = value
         case 50 ..< 50 + Int32(MindGramSendConfirm.Kind.allCases.count):
             MindGramSendConfirm.set(MindGramSendConfirm.Kind.allCases[Int(id - 50)], value)
+        case 70:
+            MindGramForward.showsMenuItem = value
+        case 71:
+            MindGramForward.alwaysHideAuthor = value
         case 41:
             MindGramTranscription.alwaysLocal = value
         default:
@@ -170,6 +174,10 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             entries.append(.toggle(id: 50 + Int32(index), section: 5, title: kind.title(isRussian: strings.isRussian), info: kind.question(isRussian: strings.isRussian), value: MindGramSendConfirm.isOn(kind)))
         }
         entries.append(.footer(id: 60, section: 5, text: strings.t("Перед отправкой появится вопрос, чтобы не отправить случайно.", "A question appears before sending, so nothing goes out by accident.")))
+
+        entries.append(.header(id: 69, section: 6, text: strings.t("ПЕРЕСЫЛКА", "FORWARDING")))
+        entries.append(.toggle(id: 70, section: 6, title: strings.t("«Переслать без автора»", "\"Forward Without Author\""), info: strings.t("Пункт в меню сообщения", "An item in the message menu"), value: MindGramForward.showsMenuItem))
+        entries.append(.toggle(id: 71, section: 6, title: strings.t("Всегда без автора", "Always Without Author"), info: strings.t("И для выбранных сообщений", "Also for selected messages"), value: MindGramForward.alwaysHideAuthor))
         return entries
     })
     pushImpl = { [weak controller] c in

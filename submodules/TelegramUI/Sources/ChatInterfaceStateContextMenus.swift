@@ -1966,6 +1966,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     interfaceInteraction.forwardMessages(selectAll || isImage ? messages : [message])
                     f(.dismissWithoutContent)
                 })))
+                if MindGramForward.showsMenuItem {
+                    let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
+                    actions.append(.action(ContextMenuActionItem(text: isRussian ? "Переслать без автора" : "Forward Without Author", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        // MindGram: the forward flow reads this once and hides the sender.
+                        mindGramForwardWithoutAuthorOnce = true
+                        interfaceInteraction.forwardMessages(selectAll || isImage ? messages : [message])
+                        f(.dismissWithoutContent)
+                    })))
+                }
             }
         }
         

@@ -48,3 +48,18 @@ public enum MindGramSendConfirm {
         MindGramDefaults.setBool("MindGram.confirm.\(kind.rawValue)", value)
     }
 }
+
+/// «Пересылка без автора».
+public enum MindGramForward {
+    /// Show «Переслать без автора» in the message menu.
+    public static var showsMenuItem: Bool {
+        get { return MindGramDefaults.bool("MindGram.forward.menuItem", default: true) }
+        set { MindGramDefaults.setBool("MindGram.forward.menuItem", newValue) }
+    }
+
+    /// Every forward goes without the author's name (also for several selected messages).
+    public static var alwaysHideAuthor: Bool {
+        get { return MindGramDefaults.bool("MindGram.forward.alwaysHide", default: false) }
+        set { MindGramDefaults.setBool("MindGram.forward.alwaysHide", newValue) }
+    }
+}
