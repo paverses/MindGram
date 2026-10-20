@@ -22,4 +22,7 @@ for icon in "$BRANDING"/AlternateIcons/*.alticon; do
     cp -R "$icon" "$ROOT/Telegram/Telegram-iOS/$(basename "$icon")"
 done
 
+# The badge Telegram shows at the top centre, under the notch.
+cp "$BRANDING/AppBadge@3x.png" "$ROOT/submodules/TelegramUI/Images.xcassets/Components/AppBadge.imageset/AppBadge@3x.png"
+
 echo "MindGram branding applied."

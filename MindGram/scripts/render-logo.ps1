@@ -153,3 +153,34 @@ for ($i = 0; $i -lt $names.Count; $i++) {
 }
 $g.Dispose()
 Save-Png $sheet (Join-Path $PSScriptRoot "..\Branding\AlternateIcons-preview.png")
+
+# App badge shown by Telegram at the top centre, under the notch (Components/AppBadge, 93x22 pt @3x):
+# a dark pill with the logo standing in for the "M" of "indGram".
+$bw = 279; $bh = 66
+$badge = New-Object System.Drawing.Bitmap $bw, $bh
+$g = [System.Drawing.Graphics]::FromImage($badge)
+$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+$g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+$g.Clear([System.Drawing.Color]::Transparent)
+$pill = New-Object System.Drawing.Drawing2D.GraphicsPath
+$pill.AddArc(0, 0, $bh, $bh, 90, 180); $pill.AddArc($bw - $bh, 0, $bh, $bh, 270, 180); $pill.CloseFigure()
+$g.FillPath((New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml("#121214"))), $pill)
+$white = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml("#F4F4F2"))
+# Unbounded (SIL OFL, Branding/fonts) — the typeface of the owner's mini apps.
+$fonts = New-Object System.Drawing.Text.PrivateFontCollection
+$fonts.AddFontFile((Join-Path $PSScriptRoot "..\Branding\fonts\Unbounded[wght].ttf"))
+$font = New-Object System.Drawing.Font ($fonts.Families | Where-Object { $_.Name -eq "Unbounded Medium" } | Select-Object -First 1), 25, ([System.Drawing.FontStyle]::Regular), ([System.Drawing.GraphicsUnit]::Pixel)
+$text = "indGram"
+$format = [System.Drawing.StringFormat]::GenericTypographic
+$textSize = $g.MeasureString($text, $font, 1000, $format)
+$capHeight = 19.0
+$logoWidth = $capHeight * 69 / 54.5
+$gap = 2.0
+$total = $logoWidth + $gap + $textSize.Width
+$x0 = ($bw - $total) / 2
+$baseline = ($bh + $capHeight) / 2
+$g.FillPath($white, (New-LogoPath $x0 ($baseline - $capHeight) $logoWidth))
+$ascent = $font.FontFamily.GetCellAscent([System.Drawing.FontStyle]::Regular) * $font.Size / $font.FontFamily.GetEmHeight([System.Drawing.FontStyle]::Regular)
+$g.DrawString($text, $font, $white, ($x0 + $logoWidth + $gap), ($baseline - $ascent), $format)
+$g.Dispose()
+Save-Png $badge (Join-Path $PSScriptRoot "..\Branding\AppBadge@3x.png")
