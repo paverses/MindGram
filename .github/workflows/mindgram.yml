@@ -105,8 +105,12 @@ jobs:
       - name: Build
         # Leaves the last hour of the job for saving the cache, even when the build itself times out.
         timeout-minutes: 290
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BUILD_NUMBER=$(( $(cat build_number_offset) + ${{ github.run_number }} ))
+          # MindGram builds are numbered in order: 1, 2, 3... = the number of published builds + 1.
+          RELEASES=$(gh release list -R "$GITHUB_REPOSITORY" -L 1000 --json tagName -q 'length')
+          BUILD_NUMBER=$(( RELEASES + 1 ))
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py \
