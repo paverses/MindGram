@@ -311,13 +311,22 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateAlpha(node: self.contentNode, alpha: fraction)
         
         let backgroundY: CGFloat = size.height * (1.0 - fraction)
-        let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundY), size: CGSize(width: size.width, height: max(0.0, size.height - backgroundY)))
+        var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundY), size: CGSize(width: size.width, height: max(0.0, size.height - backgroundY)))
+        var backgroundCornerRadius = min(16.0, backgroundFrame.height * 0.5)
+        // MindGram: "Круглые кнопки в профиле" — a circle above the title; works with the glass too.
+        let mindGramRound = MindGramSettings.isOn(.roundProfileButtons)
+        let mindGramCircle = min(46.0, size.height - titleSize.height - 3.0)
+        if mindGramRound {
+            let diameter = max(0.0, mindGramCircle * fraction)
+            backgroundFrame = CGRect(x: floor((size.width - diameter) / 2.0), y: floor((mindGramCircle - diameter) / 2.0), width: diameter, height: diameter)
+            backgroundCornerRadius = diameter * 0.5
+        }
         //transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(view: self.backgroundView, frame: backgroundFrame)
         
         transition.updateSublayerTransformScale(node: self.contentNode, scale: 1.0 * fraction + 0.001 * (1.0 - fraction))
         
-        transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(16.0, backgroundFrame.height * 0.5))
+        transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: backgroundCornerRadius)
 
         // MindGram: "Liquid Glass в профиле" turns the header buttons into clear glass.
         if MindGramSettings.isOn(.glassProfile) {
@@ -331,7 +340,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 self.referenceNode.view.insertSubview(glassView, at: 0)
             }
             transition.updateFrame(view: glassView, frame: backgroundFrame)
-            glassView.update(size: backgroundFrame.size, cornerRadius: min(16.0, backgroundFrame.height * 0.5), isDark: true, tintColor: GlassBackgroundView.TintColor(kind: .clear), transition: .immediate)
+            glassView.update(size: backgroundFrame.size, cornerRadius: backgroundCornerRadius, isDark: true, tintColor: GlassBackgroundView.TintColor(kind: .clear), transition: .immediate)
             self.backgroundView.alpha = 0.0
         } else if let glassView = self.mindGramGlassView {
             self.mindGramGlassView = nil
@@ -342,14 +351,14 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         // The context source contains only the foreground; its backdrop is a
         // separate shared-blur mask. Match both its rounded shape and its visible
         // bounds, including a partially collapsed header.
-        self.referenceNode.contextMenuSourcePath = UIBezierPath(roundedRect: backgroundFrame, cornerRadius: min(16.0, backgroundFrame.height * 0.5))
+        self.referenceNode.contextMenuSourcePath = UIBezierPath(roundedRect: backgroundFrame, cornerRadius: backgroundCornerRadius)
         //self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: min(11.0, backgroundFrame.height * 0.5), transition: transition)
         //self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
-        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: mindGramRound ? floor((mindGramCircle - iconSize.height) / 2.0) : 1.0), size: iconSize))
         if let animatedIconView = self.animatedIcon?.view {
-            transition.updateFrame(view: animatedIconView, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
+            transition.updateFrame(view: animatedIconView, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: mindGramRound ? floor((mindGramCircle - iconSize.height) / 2.0) : 1.0), size: iconSize))
         }
-        transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 9.0), size: titleSize))
+        transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: mindGramRound ? mindGramCircle + 2.0 : size.height - titleSize.height - 9.0), size: titleSize))
         
         self.referenceNode.frame = self.containerNode.bounds
         self.updateContextMenuBackground()

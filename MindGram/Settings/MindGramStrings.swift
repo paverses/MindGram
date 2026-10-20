@@ -60,6 +60,16 @@ public struct MindGramStrings {
             return t("Liquid Glass в профиле", "Liquid Glass Profile")
         case .glassBotButtons:
             return t("Liquid Glass на кнопках", "Liquid Glass Buttons")
+        case .plusAttachMenu:
+            return t("«+» вместо скрепки", "\"+\" Instead of Paperclip")
+        case .quickActionsMenu:
+            return t("Новое меню сообщения", "New Message Menu")
+        case .noContextBlur:
+            return t("Без размытия при зажатии", "No Blur on Long Press")
+        case .largerReactions:
+            return t("Крупнее реакции", "Larger Reactions")
+        case .roundProfileButtons:
+            return t("Круглые кнопки в профиле", "Round Profile Buttons")
         }
     }
 
@@ -89,6 +99,16 @@ public struct MindGramStrings {
             return t("Стеклянные кнопки в профиле", "Glass buttons in profiles")
         case .glassBotButtons:
             return t("Стекло на инлайн-кнопках ботов", "Glass on bot inline buttons")
+        case .plusAttachMenu:
+            return t("Стеклянное меню вложений", "Glass attachment menu")
+        case .quickActionsMenu:
+            return t("Выбрать, Скопировать, Удалить сверху", "Select, Copy, Delete on top")
+        case .noContextBlur:
+            return t("Чат вокруг сообщения не размыт", "The chat stays sharp")
+        case .largerReactions:
+            return t("Реакции над сообщением больше", "Bigger reactions above messages")
+        case .roundProfileButtons:
+            return t("Звонок, Звук, Поиск — круги", "Call, Mute, Search as circles")
         }
     }
 

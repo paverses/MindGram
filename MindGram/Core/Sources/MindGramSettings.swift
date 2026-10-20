@@ -17,6 +17,12 @@ public enum MindGramToggle: String, CaseIterable {
     case glassMessages
     case glassProfile
     case glassBotButtons
+    // Оформление → Эксперименты (only the owner account sees these)
+    case plusAttachMenu
+    case quickActionsMenu
+    case noContextBlur
+    case largerReactions
+    case roundProfileButtons
 }
 
 /// A row of the Settings screen that Разделы меню can hide.
@@ -221,5 +227,22 @@ public enum MindGramAccountAge {
             lower = point
         }
         return .approximately(Date(timeIntervalSince1970: TimeInterval(last.timestamp)))
+    }
+}
+
+/// The MindGram owner's accounts: the experimental design switches are shown only to them.
+public enum MindGramOwner {
+    public static let peerIds: Set<Int64> = [8690187164]
+    public static let usernames: Set<String> = ["aftreen"]
+
+    /// `peerId` is the account's user id (PeerId.id), `username` its @username without "@".
+    public static func isOwner(userId: Int64, username: String?) -> Bool {
+        if self.peerIds.contains(userId) {
+            return true
+        }
+        if let username, self.usernames.contains(username.lowercased()) {
+            return true
+        }
+        return false
     }
 }

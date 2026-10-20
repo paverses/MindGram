@@ -2492,7 +2492,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        return ContextController.Items(content: .list(actions), tip: nil)
+        // MindGram: Выбрать · Скопировать · Удалить on top ("Новое меню сообщения").
+        let mindGramActions = mindGramApplyQuickActions(actions, selectTitle: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelect, copyTitle: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, deleteTitles: [chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, chatPresentationInterfaceState.strings.Chat_MessageContextMenu_Remove])
+        return ContextController.Items(content: .list(mindGramActions), tip: nil)
     }
 }
 

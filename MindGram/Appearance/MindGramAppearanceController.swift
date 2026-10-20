@@ -10,94 +10,73 @@ import AccountContext
 import UndoUI
 import MindGramCore
 
-private final class MindGramAppearanceControllerArguments {
-    let updateClassicDesign: (Bool) -> Void
+/// Experimental design switches, in display order; only the owner account sees them.
+private let experimentToggles: [MindGramToggle] = [
+    .plusAttachMenu,
+    .quickActionsMenu,
+    .noContextBlur,
+    .largerReactions,
+    .roundProfileButtons
+]
 
-    init(updateClassicDesign: @escaping (Bool) -> Void) {
-        self.updateClassicDesign = updateClassicDesign
-    }
-}
-
-private enum MindGramAppearanceSection: Int32 {
-    case design
-}
-
-private enum MindGramAppearanceEntry: ItemListNodeEntry {
-    case classicDesign(title: String, text: String, value: Bool)
-    case classicDesignFooter(String)
-
-    var section: ItemListSectionId {
-        return MindGramAppearanceSection.design.rawValue
-    }
-
-    var stableId: Int32 {
-        switch self {
-        case .classicDesign:
-            return 0
-        case .classicDesignFooter:
-            return 1
-        }
-    }
-
-    static func <(lhs: MindGramAppearanceEntry, rhs: MindGramAppearanceEntry) -> Bool {
-        return lhs.stableId < rhs.stableId
-    }
-
-    func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
-        let arguments = arguments as! MindGramAppearanceControllerArguments
-        switch self {
-        case let .classicDesign(title, text, value):
-            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, text: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                arguments.updateClassicDesign(value)
-            })
-        case let .classicDesignFooter(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        }
-    }
-}
-
-/// Оформление: the classic (pre-glass) Telegram design switch.
+/// Оформление: the classic (pre-glass) Telegram design switch, and the owner's design experiments.
 func mindGramAppearanceController(context: AccountContext) -> ViewController {
-    let classicDesignValue = ValuePromise<Bool>(MindGramDesign.isClassicOnNextLaunch, ignoreRepeated: true)
-    var presentRestartToastImpl: (() -> Void)?
+    var presentImpl: ((ViewController) -> Void)?
+    var username: String?
 
-    let arguments = MindGramAppearanceControllerArguments(updateClassicDesign: { value in
-        MindGramDesign.setClassicOnNextLaunch(value)
-        classicDesignValue.set(value)
-        presentRestartToastImpl?()
-    })
-
-    let signal = combineLatest(queue: .mainQueue(),
-        context.sharedContext.presentationData,
-        classicDesignValue.get()
-    )
-    |> map { presentationData, classicDesign -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let strings = MindGramStrings(presentationData)
-        let entries: [MindGramAppearanceEntry] = [
-            .classicDesign(title: strings.classicDesign, text: strings.classicDesignInfo, value: classicDesign),
-            .classicDesignFooter(strings.classicDesignFooter)
-        ]
-
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(strings.appearance), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, animateChanges: true)
-        return (controllerState, (listState, arguments))
+    let accountPeer: Signal<Void, NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+    |> map { peer -> String? in
+        return peer?.addressName
+    }
+    |> distinctUntilChanged
+    |> deliverOnMainQueue
+    |> map { value -> Void in
+        username = value
+        return Void()
     }
 
-    let controller = ItemListController(context: context, state: signal)
-    presentRestartToastImpl = { [weak controller] in
-        guard let controller else {
-            return
-        }
+    let presentRestartToast = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let strings = MindGramStrings(presentationData)
         // The same bottom toast Telegram uses for its own "action needed" notices, with a restart button.
-        controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: strings.restartTitle, text: strings.restartText, timeout: 8.0, customUndoText: strings.restartAction), elevatedLayout: false, action: { action in
+        presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: strings.restartTitle, text: strings.restartText, timeout: 8.0, customUndoText: strings.restartAction), elevatedLayout: false, action: { action in
             if case .undo = action {
                 // iOS has no API to relaunch an app; closing it applies the new design on the next start.
                 exit(0)
             }
             return false
-        }), in: .current)
+        }))
+    }
+
+    let arguments = MindGramListArguments(toggle: { id, value in
+        if id == 0 {
+            MindGramDesign.setClassicOnNextLaunch(value)
+            NotificationCenter.default.post(name: MindGramSettings.didChangeNotification, object: nil)
+            presentRestartToast()
+            return
+        }
+        let index = Int(id) - 11
+        if index >= 0 && index < experimentToggles.count {
+            MindGramSettings.set(experimentToggles[index], value)
+        }
+    })
+
+    let controller = mindGramListController(context: context, title: { $0.appearance }, arguments: arguments, extraUpdates: accountPeer, entries: { _, strings in
+        var entries: [MindGramListEntry] = []
+        entries.append(.toggle(id: 0, section: 0, title: strings.classicDesign, info: strings.classicDesignInfo, value: MindGramDesign.isClassicOnNextLaunch))
+        entries.append(.footer(id: 1, section: 0, text: strings.classicDesignFooter))
+
+        if MindGramOwner.isOwner(userId: context.account.peerId.id._internalGetInt64Value(), username: username) {
+            entries.append(.header(id: 10, section: 1, text: strings.t("ЭКСПЕРИМЕНТЫ", "EXPERIMENTS")))
+            for (index, toggle) in experimentToggles.enumerated() {
+                entries.append(.toggle(id: 11 + Int32(index), section: 1, title: strings.toggleTitle(toggle), info: strings.toggleInfo(toggle), value: MindGramSettings.isOn(toggle)))
+            }
+            entries.append(.footer(id: 20, section: 1, text: strings.t("Этот раздел видите только вы. Круглые кнопки работают вместе с «Liquid Glass в профиле».", "Only you see this section. Round buttons work together with Liquid Glass Profile.")))
+        }
+        return entries
+    })
+    presentImpl = { [weak controller] c in
+        controller?.present(c, in: .current)
     }
     return controller
 }

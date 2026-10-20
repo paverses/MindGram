@@ -508,7 +508,28 @@ public struct PresentationResourcesChat {
         })
     }
     
+    // MindGram: "+" instead of the paperclip (Оформление → Эксперименты).
+    private static let mindGramPlusImage: UIImage? = {
+        let size = CGSize(width: 30.0, height: 30.0)
+        return generateImage(size, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setStrokeColor(UIColor.white.cgColor)
+            context.setLineWidth(2.0)
+            context.setLineCap(.round)
+            let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            let half: CGFloat = 8.5
+            context.move(to: CGPoint(x: center.x - half, y: center.y))
+            context.addLine(to: CGPoint(x: center.x + half, y: center.y))
+            context.move(to: CGPoint(x: center.x, y: center.y - half))
+            context.addLine(to: CGPoint(x: center.x, y: center.y + half))
+            context.strokePath()
+        })?.withRenderingMode(.alwaysTemplate)
+    }()
+
     public static func chatInputPanelAttachmentButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        if MindGramSettings.isOn(.plusAttachMenu) {
+            return self.mindGramPlusImage
+        }
         return theme.image(PresentationResourceKey.chatInputPanelAttachmentButtonImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: .white)?.withRenderingMode(.alwaysTemplate)
         })

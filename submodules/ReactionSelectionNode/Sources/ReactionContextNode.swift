@@ -1276,9 +1276,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         let externalSideInset: CGFloat = 4.0
         let sideInset: CGFloat = 6.0
         let itemSpacing: CGFloat = 8.0
-        var itemSize: CGFloat = 36.0
+        // MindGram: "Крупнее реакции" (Оформление → Эксперименты).
+        let mindGramLarger = MindGramSettings.isOn(.largerReactions)
+        var itemSize: CGFloat = mindGramLarger ? 40.0 : 36.0
         let verticalInset: CGFloat = 13.0
-        let rowHeight: CGFloat = 30.0
+        let rowHeight: CGFloat = mindGramLarger ? 34.0 : 30.0
         
         var itemCount: Int
         var visibleContentWidth: CGFloat

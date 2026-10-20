@@ -1,4 +1,5 @@
 import UIKit
+import MindGramCore
 import UIKitRuntimeUtils
 import AVFoundation
 
@@ -21,6 +22,10 @@ public func springAnimationValueAt(_ animation: CABasicAnimation, _ t: CGFloat) 
 }
 
 public func makeCustomZoomBlurEffect(isLight: Bool) -> UIBlurEffect? {
+    // MindGram: "Без размытия при зажатии" (Оформление → Эксперименты).
+    if MindGramSettings.isOn(.noContextBlur) {
+        return nil
+    }
     return makeCustomZoomBlurEffectImpl(isLight)
 }
 

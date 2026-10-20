@@ -41,6 +41,7 @@ import ChatRichTextEditorComposer
 import Postbox
 import WalletContext
 import WalletSendScreen
+import MindGramUI
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -424,7 +425,18 @@ extension ChatControllerImpl {
                     }) ?? buttons.endIndex
                     buttons.insert(.richText, at: firstBotIndex)
                 }
-                
+
+                // MindGram: the "+" menu (Оформление → Эксперименты) chooses the tab first.
+                if MindGramSettings.isOn(.plusAttachMenu), case .default = subject, !isEditingMessage {
+                    if let picked = mindGramPickedAttachButton {
+                        mindGramPickedAttachButton = nil
+                        initialButton = picked
+                    } else {
+                        strongSelf.mindGramPresentAttachMenu(buttons: buttons)
+                        return
+                    }
+                }
+
                 guard let initialButton = initialButton else {
                     if case let .bot(botId, botPayload, botJustInstalled) = subject {
                         if let button = allButtons.first(where: { button in
@@ -2339,5 +2351,65 @@ extension ChatControllerImpl {
         )
         controller.navigationPresentation = .modal
         self.push(controller)
+    }
+}
+
+// MindGram: the "+" menu. The tab picked there is handed to the next presentAttachmentMenu call.
+private var mindGramPickedAttachButton: AttachmentButtonType?
+
+extension ChatControllerImpl {
+    fileprivate func mindGramPresentAttachMenu(buttons: [AttachmentButtonType]) {
+        let strings = self.presentationData.strings
+        var shown: [AttachmentButtonType] = []
+        var items: [MindGramAttachMenuItem] = []
+        for button in buttons {
+            let item: MindGramAttachMenuItem
+            switch button {
+            case .gallery:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Gallery, symbol: "photo.fill", color: UIColor(rgb: 0xff3b6f))
+            case .file:
+                item = MindGramAttachMenuItem(title: strings.Attachment_File, symbol: "folder.fill", color: UIColor(rgb: 0x2f8cff))
+            case .location:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Location, symbol: "location.fill", color: UIColor(rgb: 0x34c759))
+            case .contact:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Contact, symbol: "person.fill", color: UIColor(rgb: 0xff7a3d))
+            case .poll:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Poll, symbol: "chart.bar.fill", color: UIColor(rgb: 0xffb300))
+            case .todo:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Todo, symbol: "checklist", color: UIColor(rgb: 0xf5c400))
+            case .gift:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Gift, symbol: "gift.fill", color: UIColor(rgb: 0xaf52de))
+            case .money:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Money, symbol: "creditcard.fill", color: UIColor(rgb: 0x30b0c7))
+            case .quickReply:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Reply, symbol: "bolt.fill", color: UIColor(rgb: 0x5856d6))
+            case .richText:
+                item = MindGramAttachMenuItem(title: strings.Attachment_Article, symbol: "doc.richtext.fill", color: UIColor(rgb: 0x8e8e93))
+            case let .app(bot):
+                item = MindGramAttachMenuItem(title: bot.shortName, symbol: "square.grid.2x2.fill", color: UIColor(rgb: 0x5ac8fa), badge: true)
+            default:
+                continue
+            }
+            shown.append(button)
+            items.append(item)
+        }
+        guard !items.isEmpty else {
+            return
+        }
+
+        var anchor = CGRect(x: 16.0, y: self.view.bounds.height - 120.0, width: 44.0, height: 44.0)
+        if let panel = self.chatDisplayNode.inputPanelNode {
+            anchor = panel.view.convert(panel.bounds, to: self.view)
+            anchor.origin.x = 16.0
+        }
+        self.view.endEditing(true)
+        let menu = MindGramAttachMenuView(items: items, isDark: self.presentationData.theme.overallDarkAppearance, select: { [weak self] index in
+            guard let self, index < shown.count else {
+                return
+            }
+            mindGramPickedAttachButton = shown[index]
+            self.presentAttachmentMenu(subject: .default)
+        })
+        menu.show(in: self.view, anchor: anchor)
     }
 }
