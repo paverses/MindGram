@@ -1228,9 +1228,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             if self.isSettings, case let .user(user) = peer {
                 var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
-                
+                // MindGram: "Скрыть номер телефона" also hides it in the Settings header.
+                let hidePhone = MindGramSettings.isOn(.hidePhoneNumber)
+                if hidePhone {
+                    subtitle = ""
+                }
+
                 if let mainUsername = user.addressName, !mainUsername.isEmpty {
-                    subtitle = "\(subtitle) • @\(mainUsername)"
+                    subtitle = hidePhone ? "@\(mainUsername)" : "\(subtitle) • @\(mainUsername)"
                 }
                 subtitleStringText = subtitle
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white)

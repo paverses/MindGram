@@ -16,6 +16,8 @@ import WebUI
 import AvatarNode
 import PeerNameColorItem
 import BoostLevelIconComponent
+import UndoUI
+import MindGramUI
 
 private let enabledPublicBioEntities: EnabledEntityTypes = [.allUrl, .mention, .hashtag]
 private let enabledPrivateBioEntities: EnabledEntityTypes = [.internalUrl, .mention, .hashtag]
@@ -44,6 +46,7 @@ enum InfoSection: Int, CaseIterable {
     case groupLocation
     case calls
     case personalChannel
+    case mindgram // MindGram: ID / DC / mutual / dates, right before the username section
     case peerInfo
     case balances
     case permissions
@@ -76,7 +79,23 @@ func infoItems(
     for section in InfoSection.allCases {
         items[section] = []
     }
-    
+
+    // MindGram: ID, DC, mutual and creation date rows, styled like the username row (MindGram/Profile).
+    if let peer = data.peer {
+        for row in mindGramProfileRows(peer: peer, accountPeerId: context.account.peerId, presentationData: presentationData) {
+            var longTapAction: ((ASDisplayNode) -> Void)?
+            if let copyValue = row.copyValue {
+                longTapAction = { _ in
+                    UIPasteboard.general.string = copyValue
+                    interaction.getController()?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: MindGramStrings(presentationData).copiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                }
+            }
+            items[.mindgram]!.append(PeerInfoScreenLabeledValueItem(id: "mindgram-\(row.key)", label: row.label, text: row.value, textColor: .primary, action: nil, longTapAction: longTapAction, requestLayout: { animated in
+                interaction.requestLayout(animated)
+            }))
+        }
+    }
+
     let bioContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
         interaction.openBioContextMenu(node, gesture)
     }
@@ -173,7 +192,7 @@ func infoItems(
             ))
         }
         
-        if let phone = user.phone {
+        if let phone = user.phone, !MindGramSettings.isOn(.hidePhoneNumber) {
             let formattedPhone = formatPhoneNumber(context: context, number: phone)
             let label: String
             if formattedPhone.hasPrefix("+888 ") {

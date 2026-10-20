@@ -16,4 +16,10 @@ for dir in "$ROOT/Telegram/Telegram-iOS/Resources/intro" "$ROOT/submodules/RMInt
     cp "$BRANDING/intro/telegram_plane1@2x.png" "$dir/telegram_plane1@2x.png"
 done
 
+# Alternate app icons (Settings > Appearance > App Icon): regular and inverted.
+for icon in "$BRANDING"/AlternateIcons/*.alticon; do
+    rm -rf "$ROOT/Telegram/Telegram-iOS/$(basename "$icon")"
+    cp -R "$icon" "$ROOT/Telegram/Telegram-iOS/$(basename "$icon")"
+done
+
 echo "MindGram branding applied."

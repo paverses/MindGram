@@ -213,6 +213,11 @@ final class TabBarControllerNode: ASDisplayNode {
         }
     }
     
+    /// MindGram: forget the cached layout so the next pass re-reads the navbar size settings.
+    func mindGramInvalidateLayout() {
+        self.layoutResult = nil
+    }
+
     private func requestUpdate() {
         self.isUpdateRequested = true
         self.view.setNeedsLayout()
@@ -294,6 +299,14 @@ final class TabBarControllerNode: ASDisplayNode {
         var sideInset: CGFloat = 12.0
         if tabBarBottomInset <= 28.0 {
             sideInset = 20.0
+        }
+
+        // MindGram: "Ширина навбара" scales the bar around its default width, up to the screen edges.
+        let mindGramWidthScale = CGFloat(MindGramSettings.navbarWidthPercent) / 100.0
+        if mindGramWidthScale != 1.0 {
+            let defaultWidth = params.layout.size.width - sideInset * 2.0
+            let scaledWidth = min(params.layout.size.width - 8.0, defaultWidth * mindGramWidthScale)
+            sideInset = floor((params.layout.size.width - scaledWidth) * 0.5)
         }
         
         var selectedId: AnyHashable?

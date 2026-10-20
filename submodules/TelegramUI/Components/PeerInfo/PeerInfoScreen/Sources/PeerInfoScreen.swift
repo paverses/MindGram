@@ -291,6 +291,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     let sourceMessageId: MessageId?
     var canDeleteReaction = false
     var dataDisposable: Disposable?
+    private var mindGramSettingsObserver: NSObjectProtocol?
     
     let activeActionDisposable = MetaDisposable()
     let logoutConfirmationDisposable = MetaDisposable()
@@ -2620,11 +2621,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.boostStatusDisposable?.dispose()
         self.personalChannelsDisposable?.dispose()
         self.autoTranslateDisposable?.dispose()
+        if let mindGramSettingsObserver = self.mindGramSettingsObserver {
+            NotificationCenter.default.removeObserver(mindGramSettingsObserver)
+        }
     }
     
     override func didLoad() {
         super.didLoad()
-                
+
+        // MindGram: rebuild the rows when a MindGram switch changes (hidden Settings rows, profile rows).
+        self.mindGramSettingsObserver = NotificationCenter.default.addObserver(forName: MindGramSettings.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self, let (layout, navigationHeight) = self.validLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+        })
+
         self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             if let strongSelf = self {
                 return strongSelf.state.isEditing

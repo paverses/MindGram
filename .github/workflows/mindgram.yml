@@ -113,6 +113,7 @@ jobs:
             --overrideXcodeVersion \
             --cacheDir="$HOME/telegram-bazel-cache" \
             build \
+            --continueOnError \
             --configurationPath=build-system/mindgram-configuration.json \
             --codesigningInformationPath=build-system/fake-codesigning \
             --configuration=${{ inputs.configuration || 'release_arm64' }} \

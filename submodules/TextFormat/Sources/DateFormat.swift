@@ -2,6 +2,7 @@ import Foundation
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import Display
 
 public func stringForEntityFormattedDate(timestamp: Int32, format: MessageTextEntityType.DateTimeFormat, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
     switch format {
@@ -140,7 +141,8 @@ public func stringForMessageTimestamp(timestamp: Int32, dateTimeFormat: Presenta
         gmtime_r(&t, &timeinfo)
     }
     
-    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, seconds: withSeconds ? timeinfo.tm_sec : nil, dateTimeFormat: dateTimeFormat)
+    // MindGram: "Секунды во времени" adds seconds to every message time.
+    return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, seconds: (withSeconds || MindGramSettings.isOn(.timestampSeconds)) ? timeinfo.tm_sec : nil, dateTimeFormat: dateTimeFormat)
 }
 
 public func stringForShortDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, withTime: Bool = true) -> String {

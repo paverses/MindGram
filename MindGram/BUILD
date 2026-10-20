@@ -1,18 +1,22 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 # MindGram settings screens. One folder per screen:
-#   Settings/    the "MindGram" entry and its menu
-#   Appearance/  Оформление
-#   Tabs/        Вкладки
-#   Profile/     Профиль
+#   Settings/      the "MindGram" entry, its menu and the shared list engine
+#   Appearance/    Оформление
+#   Profile/       Профиль (and the rows MindGram adds to profiles)
+#   Tabs/          Вкладки
+#   Glass/         Liquid Glass
+#   MenuSections/  Разделы меню
 swift_library(
     name = "MindGramUI",
     module_name = "MindGramUI",
     srcs = glob([
         "Settings/**/*.swift",
         "Appearance/**/*.swift",
-        "Tabs/**/*.swift",
         "Profile/**/*.swift",
+        "Tabs/**/*.swift",
+        "Glass/**/*.swift",
+        "MenuSections/**/*.swift",
     ]),
     copts = [
         "-warnings-as-errors",
@@ -29,6 +33,10 @@ swift_library(
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/SettingsUI:SettingsUI",
+        "//submodules/TelegramUI/Components/SliderComponent:SliderComponent",
+        "//submodules/TelegramUI/Components/TabBarComponent:TabBarComponent",
     ],
     visibility = [
         "//visibility:public",

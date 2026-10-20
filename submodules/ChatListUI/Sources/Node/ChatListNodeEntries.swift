@@ -4,6 +4,7 @@ import TelegramCore
 import TelegramPresentationData
 import MergeLists
 import AccountContext
+import Display
 
 enum ChatListNodeEntryId: Hashable {
     case Header
@@ -651,6 +652,10 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     }
     
     let filteredAdditionalItemEntries = view.additionalItems.filter { item -> Bool in
+        // MindGram: Разделы меню can hide the channel a proxy pins at the top.
+        if case .proxy = item.promoInfo.content, MindGramSettings.isHidden(.proxySponsor) {
+            return false
+        }
         return item.item.renderedPeer.peerId != state.hiddenPsaPeerId
     }
     

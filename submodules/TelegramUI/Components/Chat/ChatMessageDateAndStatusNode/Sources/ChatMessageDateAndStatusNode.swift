@@ -611,7 +611,14 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 }
             }
             if let impressionCount = arguments.impressionCount {
-                updatedDateText = compactNumericCountString(impressionCount, decimalSeparator: arguments.presentationData.dateTimeFormat.decimalSeparator) + " " + updatedDateText
+                // MindGram: "Полные просмотры" shows 27 456 instead of 27K.
+                let impressionText: String
+                if MindGramSettings.isOn(.fullViewCounts) {
+                    impressionText = presentationStringsFormattedNumber(Int64(impressionCount), arguments.presentationData.dateTimeFormat.groupingSeparator)
+                } else {
+                    impressionText = compactNumericCountString(impressionCount, decimalSeparator: arguments.presentationData.dateTimeFormat.decimalSeparator)
+                }
+                updatedDateText = impressionText + " " + updatedDateText
             }
             
             let dateFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))

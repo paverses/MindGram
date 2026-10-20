@@ -2,6 +2,7 @@ import Foundation
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
+import Display
 
 public func stringForTimestamp(day: Int32, month: Int32, year: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     let separator = dateTimeFormat.dateSeparator
@@ -571,7 +572,9 @@ public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTi
     }
 }
 
-public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: EnginePeer.Presence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
+public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: EnginePeer.Presence, relativeTo timestamp: Int32, expanded: Bool = false, userId: Int64? = nil) -> (String, Bool) {
+    // MindGram: a hidden last seen gets "≈ time" from activity MindGram observed itself (MindGram/Core).
+    let mindGramApproximate: String? = userId.flatMap { MindGramActivityTracker.approximateText(userId: $0, languageCode: strings.primaryComponent.languageCode) }
     switch presence.status {
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {
@@ -620,12 +623,12 @@ public func stringAndActivityForUserPresence(strings: PresentationStrings, dateT
         if activeUntil >= timestamp {
             return (strings.Presence_online, true)
         } else {
-            return (strings.LastSeen_Lately, false)
+            return (mindGramApproximate.flatMap { "\(strings.LastSeen_Lately) · \($0)" } ?? strings.LastSeen_Lately, false)
         }
     case .lastWeek:
-        return (strings.LastSeen_WithinAWeek, false)
+        return (mindGramApproximate.flatMap { "\(strings.LastSeen_WithinAWeek) · \($0)" } ?? strings.LastSeen_WithinAWeek, false)
     case .lastMonth:
-        return (strings.LastSeen_WithinAMonth, false)
+        return (mindGramApproximate.flatMap { "\(strings.LastSeen_WithinAMonth) · \($0)" } ?? strings.LastSeen_WithinAMonth, false)
     case .longTimeAgo:
         return (strings.LastSeen_ALongTimeAgo, false)
     }

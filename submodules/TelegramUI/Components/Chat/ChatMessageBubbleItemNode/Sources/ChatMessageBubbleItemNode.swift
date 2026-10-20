@@ -29,6 +29,7 @@ import ChatMessageBackground
 import AnimationCache
 import MultiAnimationRenderer
 import ComponentFlow
+import GlassBackgroundComponent
 import EmojiStatusComponent
 import ChatControllerInteraction
 import ChatMessageForwardInfoNode
@@ -779,6 +780,34 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var highlightedState: HighlightedState?
     
     private var backgroundFrameTransition: (CGRect, CGRect)?
+    
+    // MindGram: "Liquid Glass в сообщениях" lays clear glass over the bubble in place of its fill.
+    private var mindGramGlassView: GlassBackgroundView?
+    
+    private func updateMindGramGlass(frame: CGRect) {
+        if MindGramSettings.isOn(.glassMessages) {
+            let glassView: GlassBackgroundView
+            if let current = self.mindGramGlassView {
+                glassView = current
+            } else {
+                glassView = GlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.mindGramGlassView = glassView
+                self.backgroundNode.view.superview?.insertSubview(glassView, aboveSubview: self.backgroundNode.view)
+            }
+            let isDark = self.item?.presentationData.theme.theme.overallDarkAppearance ?? false
+            glassView.isHidden = self.backgroundNode.isHidden
+            glassView.frame = frame
+            glassView.update(size: frame.size, cornerRadius: min(16.0, frame.height * 0.5), isDark: isDark, tintColor: GlassBackgroundView.TintColor(kind: .clear), transition: .immediate)
+            self.backgroundNode.alpha = 0.0
+            self.backgroundWallpaperNode.alpha = 0.0
+        } else if let glassView = self.mindGramGlassView {
+            self.mindGramGlassView = nil
+            glassView.removeFromSuperview()
+            self.backgroundNode.alpha = 1.0
+            self.backgroundWallpaperNode.alpha = 1.0
+        }
+    }
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
@@ -5566,6 +5595,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             // layer, so it compares exactly. Keep it that way.
             if !previousBackgroundFrame.equalTo(backgroundFrame) {
                 animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                strongSelf.updateMindGramGlass(frame: backgroundFrame)
                 if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
                     animation.animator.updateFrame(layer: backgroundHighlightNode.layer, frame: backgroundFrame, completion: nil)
                     backgroundHighlightNode.updateLayout(size: backgroundFrame.size, transition: animation)
@@ -5717,6 +5747,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
             strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
             strongSelf.backgroundWallpaperNode.frame = backgroundFrame
+            strongSelf.updateMindGramGlass(frame: backgroundFrame)
             strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
             if let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)

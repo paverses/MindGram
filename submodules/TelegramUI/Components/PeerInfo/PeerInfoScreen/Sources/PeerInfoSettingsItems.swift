@@ -356,7 +356,40 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
     items[.support]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.Settings_Tips, icon: PresentationResourcesSettings.tips, action: {
         interaction.openSettings(.tips)
     }))
-    
+
+    // MindGram: rows hidden in MindGram > Разделы меню (MindGram/MenuSections).
+    let mindGramRows: [(SettingsSection, AnyHashable, MindGramMenuSection)] = [
+        (.myProfile, 0, .myProfile),
+        (.wallet, 0, .wallet),
+        (.proxy, 0, .proxy),
+        (.shortcuts, 1, .savedMessages),
+        (.shortcuts, 2, .recentCalls),
+        (.shortcuts, 3, .devices),
+        (.shortcuts, 4, .chatFolders),
+        (.advanced, 0, .notifications),
+        (.advanced, 1, .privacy),
+        (.advanced, 2, .dataAndStorage),
+        (.advanced, 3, .appearance),
+        (.advanced, 6, .powerSaving),
+        (.advanced, 4, .language),
+        (.payment, 100, .premium),
+        (.payment, 102, .stars),
+        (.payment, 103, .ton),
+        (.payment, 104, .business),
+        (.payment, 105, .sendGift),
+        (.extra, 0, .passport),
+        (.extra, 1, .watch),
+        (.support, 0, .support),
+        (.support, 1, .faq),
+        (.support, 2, .tips)
+    ]
+    for (section, id, menuSection) in mindGramRows where MindGramSettings.isHidden(menuSection) {
+        items[section]?.removeAll(where: { $0.id == id })
+    }
+    if MindGramSettings.isHidden(.miniApps) {
+        items[.apps] = []
+    }
+
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in SettingsSection.allCases {
         if let sectionItems = items[section], !sectionItems.isEmpty {

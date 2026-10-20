@@ -83,3 +83,25 @@ The script applies the difference between Telegram's old and new versions (`UPST
 patch. Files without hooks update automatically. If Telegram changed a line with a hook, git marks a
 conflict: keep Telegram's new code and add the MindGram line back (using the table above). Then:
 `git commit -m "Update Telegram to …"` and `git push`.
+
+## MindGram features and their hooks (October 2026)
+
+Switches live in `Core/Sources/MindGramSettings.swift` (`MindGramToggle`, `MindGramMenuSection`, navbar size);
+screens are built with the shared list engine in `Settings/MindGramList.swift`.
+
+| Feature | Screen | Hook in Telegram's code |
+|---|---|---|
+| ID / DC / Взаимные / Создан / Регистрация rows | Профиль | `PeerInfoProfileItems.swift` (`InfoSection.mindgram`, rows from `Profile/MindGramProfileRows.swift`) |
+| Full view counts | Профиль | `ChatMessageDateAndStatusNode.swift` |
+| Hide phone number | Профиль | `PeerInfoProfileItems.swift`, `PeerInfoHeaderNode.swift` |
+| Seconds in timestamps | Профиль | `TextFormat/Sources/DateFormat.swift` (`stringForMessageTimestamp`) |
+| "Last seen recently · ≈ time" | Профиль | `ApplicationContext.swift` records activity (`Core/MindGramActivityTracker.swift`); `PresenceStrings.swift` (`userId:`), `ChatTitleView.swift`, `ChatTitleComponent.swift`, `PeerInfoData.swift` |
+| Account age estimate | Профиль | `Core/MindGramSettings.swift` (`MindGramAccountAge`, GetIDs table MIT + quarterly medians) |
+| Hide Contacts / Calls tabs | Вкладки | `TelegramRootController.swift`, `ApplicationContext.swift` (Calls uses Telegram's own `CallListSettings`) |
+| Navbar height / width | Вкладки | `TabBarComponent.swift` (`mindGramHeightScale`), `TabBarContollerNode.swift` (width), `TabBarController.swift` (relayout) |
+| Glass on messages | Liquid Glass | `ChatMessageBubbleItemNode.swift` (`updateMindGramGlass`) |
+| Glass on bot buttons | Liquid Glass | `ChatMessageActionButtonsNode.swift` |
+| Glass on profile buttons | Liquid Glass | `PeerInfoHeaderButtonNode.swift` |
+| Chat preview | Liquid Glass | `SettingsUI/Sources/MindGramChatPreview.swift` (new file) |
+| Hide Settings rows (25) | Разделы меню | `PeerInfoSettingsItems.swift` (filter before `result`), `PeerInfoScreen.swift` (relayout on change), `ChatListNodeEntries.swift` (proxy sponsor) |
+| App icons (regular, inverted) | Telegram's Appearance | `AppDelegate.swift`, `Telegram/BUILD` (`alternate_icon_folders`), icons in `Branding/AlternateIcons` |

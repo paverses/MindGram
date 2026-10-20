@@ -355,6 +355,8 @@ public final class TabBarComponent: Component {
     public let search: Search?
     public let selectedId: AnyHashable?
     public let outerInsets: UIEdgeInsets
+    /// MindGram: "Высота навбара", 0.5–1.5 of Telegram's height, read when the component is made.
+    public let mindGramHeightScale: CGFloat
     
     public init(
         theme: PresentationTheme,
@@ -374,6 +376,7 @@ public final class TabBarComponent: Component {
         self.search = search
         self.selectedId = selectedId
         self.outerInsets = outerInsets
+        self.mindGramHeightScale = CGFloat(MindGramSettings.navbarHeightPercent) / 100.0
     }
     
     public static func ==(lhs: TabBarComponent, rhs: TabBarComponent) -> Bool {
@@ -399,6 +402,9 @@ public final class TabBarComponent: Component {
             return false
         }
         if lhs.outerInsets != rhs.outerInsets {
+            return false
+        }
+        if lhs.mindGramHeightScale != rhs.mindGramHeightScale {
             return false
         }
         return true
@@ -662,7 +668,7 @@ public final class TabBarComponent: Component {
             
             self.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
 
-            let barHeight: CGFloat = 56.0 + innerInset * 2.0
+            let barHeight: CGFloat = 56.0 * component.mindGramHeightScale + innerInset * 2.0
 
             var availableItemsWidth: CGFloat = availableSize.width - innerInset * 2.0
             if component.search != nil {
@@ -727,7 +733,7 @@ public final class TabBarComponent: Component {
 
             let itemHeight: CGFloat = 56.0
             let contentWidth: CGFloat = innerInset * 2.0 + totalItemsWidth
-            let tabsSize = CGSize(width: min(availableSize.width, contentWidth), height: itemHeight + innerInset * 2.0)
+            let tabsSize = CGSize(width: min(availableSize.width, contentWidth), height: itemHeight * component.mindGramHeightScale + innerInset * 2.0)
 
             var selectionFrame: CGRect?
             var nextItemX: CGFloat = innerInset

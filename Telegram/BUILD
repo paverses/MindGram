@@ -322,6 +322,8 @@ filegroup(
 )
 
 alternate_icon_folders = [
+    "MindGram",
+    "MindGramInverted",
     "BlackIcon",
     "BlackClassicIcon",
     "BlackFilledIcon",

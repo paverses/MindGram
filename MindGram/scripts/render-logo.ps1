@@ -66,3 +66,37 @@ $w = 300.0
 $g.FillPath([System.Drawing.Brushes]::White, (New-LogoPath (($size - $w) / 2) (($size - $w * 54.5 / 69) / 2) $w))
 $g.Dispose()
 Save-Png $b (Join-Path $OutDir "..\AppIcon-preview.png")
+
+# Alternate app icons for Settings > Appearance > App Icon: the regular one and the inverted one
+# (white background, black logo). Names follow Telegram's .alticon folders (see Telegram/BUILD).
+function Save-Icon([string]$dir, [string]$file, [int]$size, [bool]$inverted) {
+    $b = New-Object System.Drawing.Bitmap $size, $size
+    $g = [System.Drawing.Graphics]::FromImage($b)
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    if ($inverted) {
+        $g.Clear([System.Drawing.Color]::White)
+        $brush = [System.Drawing.Brushes]::Black
+    } else {
+        $g.Clear([System.Drawing.Color]::Black)
+        $brush = [System.Drawing.Brushes]::White
+    }
+    $w = $size * 0.586
+    $g.FillPath($brush, (New-LogoPath (($size - $w) / 2) (($size - $w * 54.5 / 69) / 2) $w))
+    $g.Dispose()
+    Save-Png $b (Join-Path $dir $file)
+}
+
+$iconRoot = Join-Path $PSScriptRoot "..\Branding\AlternateIcons"
+foreach ($variant in @(@{ Name = "MindGram"; Inverted = $false }, @{ Name = "MindGramInverted"; Inverted = $true })) {
+    $name = $variant.Name
+    $dir = Join-Path $iconRoot "$name.alticon"
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    Save-Icon $dir "$name@2x.png" 120 $variant.Inverted
+    Save-Icon $dir "$name@3x.png" 180 $variant.Inverted
+    Save-Icon $dir "${name}Ipad.png" 76 $variant.Inverted
+    Save-Icon $dir "${name}Ipad@2x.png" 152 $variant.Inverted
+    Save-Icon $dir "${name}LargeIpad@2x.png" 167 $variant.Inverted
+    Save-Icon $dir "${name}NotificationIcon.png" 20 $variant.Inverted
+    Save-Icon $dir "${name}NotificationIcon@2x.png" 40 $variant.Inverted
+    Save-Icon $dir "${name}NotificationIcon@3x.png" 60 $variant.Inverted
+}

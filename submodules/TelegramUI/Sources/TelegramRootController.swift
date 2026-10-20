@@ -209,7 +209,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         contactsController.switchToChatsController = {  [weak self] in
             self?.openChatsController(activateSearch: false)
         }
-        controllers.append(contactsController)
+        // MindGram: "Скрыть вкладку «Контакты»".
+        if !MindGramSettings.isOn(.hideContactsTab) {
+            controllers.append(contactsController)
+        }
         
         if showCallsTab {
             controllers.append(callListController)
@@ -250,7 +253,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             return
         }
         var controllers: [ViewController] = []
-        controllers.append(self.contactsController!)
+        if !MindGramSettings.isOn(.hideContactsTab) {
+            controllers.append(self.contactsController!)
+        }
         if showCallsTab {
             controllers.append(self.callListController!)
         }

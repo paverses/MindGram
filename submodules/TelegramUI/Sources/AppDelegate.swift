@@ -1001,7 +1001,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
             if !MindGramBranding.offersTelegramAlternateIcons {
-                return []
+                // MindGram: its own icons instead of Telegram's (MindGram/Branding/AlternateIcons).
+                return [
+                    PresentationAppIcon(name: "MindGram", imageName: "MindGram", isDefault: true),
+                    PresentationAppIcon(name: "MindGramInverted", imageName: "MindGramInverted")
+                ]
             }
             if #available(iOS 10.3, *) {
                 var icons = [

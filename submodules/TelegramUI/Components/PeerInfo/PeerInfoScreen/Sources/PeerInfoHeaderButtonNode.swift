@@ -8,6 +8,7 @@ import Display
 import TelegramPresentationData
 import ComponentFlow
 import LottieComponent
+import GlassBackgroundComponent
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -58,6 +59,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     
     let backgroundContainerView: UIView
     let backgroundView: UIView
+    private var mindGramGlassView: GlassBackgroundView?
     
     init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode, ContextGesture?) -> Void) {
         self.key = key
@@ -316,6 +318,27 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateSublayerTransformScale(node: self.contentNode, scale: 1.0 * fraction + 0.001 * (1.0 - fraction))
         
         transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(16.0, backgroundFrame.height * 0.5))
+
+        // MindGram: "Liquid Glass в профиле" turns the header buttons into clear glass.
+        if MindGramSettings.isOn(.glassProfile) {
+            let glassView: GlassBackgroundView
+            if let current = self.mindGramGlassView {
+                glassView = current
+            } else {
+                glassView = GlassBackgroundView()
+                glassView.isUserInteractionEnabled = false
+                self.mindGramGlassView = glassView
+                self.referenceNode.view.insertSubview(glassView, at: 0)
+            }
+            transition.updateFrame(view: glassView, frame: backgroundFrame)
+            glassView.update(size: backgroundFrame.size, cornerRadius: min(16.0, backgroundFrame.height * 0.5), isDark: true, tintColor: GlassBackgroundView.TintColor(kind: .clear), transition: .immediate)
+            self.backgroundView.alpha = 0.0
+        } else if let glassView = self.mindGramGlassView {
+            self.mindGramGlassView = nil
+            glassView.removeFromSuperview()
+            self.backgroundView.alpha = 1.0
+        }
+
         // The context source contains only the foreground; its backdrop is a
         // separate shared-blur mask. Match both its rounded shape and its visible
         // bounds, including a partially collapsed header.

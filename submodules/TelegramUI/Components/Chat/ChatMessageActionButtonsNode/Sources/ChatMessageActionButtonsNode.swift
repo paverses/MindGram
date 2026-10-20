@@ -10,6 +10,7 @@ import UrlHandling
 import SwiftSignalKit
 import TextLoadingEffect
 import ComponentFlow
+import GlassBackgroundComponent
 import ComponentDisplayAdapters
 import EmojiStatusComponent
 
@@ -67,6 +68,7 @@ private extension UIBezierPath {
 
 private final class ChatMessageActionButtonNode: ASDisplayNode {
     private var backgroundBlurView: PortalView?
+    private var mindGramGlassView: GlassBackgroundView?
     
     private var titleNode: TextNode?
     private var iconNode: ASImageNode?
@@ -407,6 +409,28 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         
                     } else {
                         node.backgroundBlurView?.view.isHidden = false
+                    }
+                    
+                    // MindGram: "Liquid Glass на кнопках" puts clear glass behind bot inline buttons.
+                    if MindGramSettings.isOn(.glassBotButtons) {
+                        let glassView: GlassBackgroundView
+                        if let current = node.mindGramGlassView {
+                            glassView = current
+                        } else {
+                            glassView = GlassBackgroundView()
+                            glassView.isUserInteractionEnabled = false
+                            node.mindGramGlassView = glassView
+                            node.view.insertSubview(glassView, at: 0)
+                        }
+                        let glassSize = CGSize(width: max(0.0, width), height: 42.0)
+                        glassView.frame = CGRect(origin: CGPoint(), size: glassSize)
+                        glassView.update(size: glassSize, cornerRadius: bubbleCorners.auxiliaryRadius, isDark: theme.theme.overallDarkAppearance, tintColor: GlassBackgroundView.TintColor(kind: .clear), transition: .immediate)
+                        node.backgroundBlurView?.view.isHidden = true
+                        node.backgroundContent?.isHidden = true
+                    } else if let glassView = node.mindGramGlassView {
+                        node.mindGramGlassView = nil
+                        glassView.removeFromSuperview()
+                        node.backgroundContent?.isHidden = false
                     }
                     
                     let rect = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))

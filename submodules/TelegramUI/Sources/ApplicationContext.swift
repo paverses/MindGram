@@ -153,6 +153,10 @@ final class AuthorizedApplicationContext {
     
     private var showCallsTab: Bool
     private var showCallsTabDisposable: Disposable?
+    // MindGram: tab visibility switch and the activity log behind "≈ time" for "last seen recently".
+    private var mindGramSettingsObserver: NSObjectProtocol?
+    private var mindGramHideContactsTab = MindGramSettings.isOn(.hideContactsTab)
+    private let mindGramActivityDisposable = DisposableSet()
     private var enablePostboxTransactionsDiposable: Disposable?
     
     init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, context: AccountContextImpl, accountManager: AccountManager<TelegramAccountManagerTypes>, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
@@ -818,6 +822,42 @@ final class AuthorizedApplicationContext {
                 }
             }
         })
+
+        // MindGram: rebuild the tabs when "Скрыть вкладку «Контакты»" changes.
+        self.mindGramSettingsObserver = NotificationCenter.default.addObserver(forName: MindGramSettings.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            let hideContactsTab = MindGramSettings.isOn(.hideContactsTab)
+            if self.mindGramHideContactsTab != hideContactsTab {
+                self.mindGramHideContactsTab = hideContactsTab
+                self.rootController.updateRootControllers(showCallsTab: self.showCallsTab)
+            }
+        })
+
+        // MindGram: remember when users were last seen active (their messages, typing) for "last seen recently ≈ time".
+        let accountPeerId = context.account.peerId
+        self.mindGramActivityDisposable.add((context.account.stateManager.notificationMessages
+        |> deliverOnMainQueue).start(next: { messageList in
+            for (messages, _, _, _) in messageList {
+                for message in messages {
+                    if let author = message.author, author.id.namespace == Namespaces.Peer.CloudUser, author.id != accountPeerId {
+                        MindGramActivityTracker.record(userId: author.id.id._internalGetInt64Value(), timestamp: message.timestamp)
+                    }
+                }
+            }
+        }))
+        self.mindGramActivityDisposable.add((context.account.allPeerInputActivities()
+        |> deliverOnMainQueue).start(next: { activities in
+            let timestamp = Int32(Date().timeIntervalSince1970)
+            for (_, peerActivities) in activities {
+                for (peerId, _) in peerActivities {
+                    if peerId.namespace == Namespaces.Peer.CloudUser, peerId != accountPeerId {
+                        MindGramActivityTracker.record(userId: peerId.id._internalGetInt64Value(), timestamp: timestamp)
+                    }
+                }
+            }
+        }))
         
         self.rootController.setForceInCallStatusBar((self.context.sharedContext as! SharedAccountContextImpl).currentCallStatusBarNode)
         if let groupCallController = self.context.sharedContext.currentGroupCallController as? VoiceChatController {
@@ -846,6 +886,10 @@ final class AuthorizedApplicationContext {
         self.watchNavigateToMessageDisposable.dispose()
         self.permissionsDisposable.dispose()
         self.scheduledCallPeerDisposable.dispose()
+        self.mindGramActivityDisposable.dispose()
+        if let mindGramSettingsObserver = self.mindGramSettingsObserver {
+            NotificationCenter.default.removeObserver(mindGramSettingsObserver)
+        }
     }
     
     func openNotificationSettings() {

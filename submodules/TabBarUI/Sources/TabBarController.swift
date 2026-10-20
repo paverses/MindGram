@@ -46,6 +46,7 @@ public protocol TabBarContainedController {
 
 open class TabBarControllerImpl: ViewController, TabBarController {
     private var validLayout: ContainerViewLayout?
+    private var mindGramSettingsObserver: NSObjectProtocol?
     
     private var tabBarControllerNode: TabBarControllerNode {
         get {
@@ -101,6 +102,15 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         
         super.init(navigationBarPresentationData: nil)
         
+        // MindGram: re-lay the tab bar while "Высота/Ширина навбара" change.
+        self.mindGramSettingsObserver = NotificationCenter.default.addObserver(forName: MindGramSettings.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
+            guard let self, self.isNodeLoaded, let layout = self.validLayout else {
+                return
+            }
+            self.tabBarControllerNode.mindGramInvalidateLayout()
+            self.containerLayoutUpdated(layout, transition: .immediate)
+        })
+        
         self.scrollToTop = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -117,6 +127,9 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     
     deinit {
         self.pendingControllerDisposable.dispose()
+        if let mindGramSettingsObserver = self.mindGramSettingsObserver {
+            NotificationCenter.default.removeObserver(mindGramSettingsObserver)
+        }
     }
     
     public func updateTheme(theme: PresentationTheme) {
