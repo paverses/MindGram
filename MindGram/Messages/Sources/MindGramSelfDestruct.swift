@@ -170,3 +170,28 @@ public enum MindGramTranscription {
         return !isPremium || self.alwaysLocal
     }
 }
+
+public extension MindGramTranscription {
+    /// Translate transcribed voice and round messages into the chosen language.
+    static var translates: Bool {
+        get { return MindGramDefaults.bool("MindGram.transcription.translate", default: false) }
+        set { MindGramDefaults.setBool("MindGram.transcription.translate", newValue) }
+    }
+
+    private static let requestedLock = NSLock()
+    private static var requested = Set<String>()
+
+    /// True the first time it is asked about a message and language: start that translation then.
+    static func shouldRequestTranslation(_ key: MindGramMessageKey, toLang: String) -> Bool {
+        let id = "\(key.peerId):\(key.namespace):\(key.id):\(toLang)"
+        self.requestedLock.lock()
+        defer {
+            self.requestedLock.unlock()
+        }
+        if self.requested.contains(id) {
+            return false
+        }
+        self.requested.insert(id)
+        return true
+    }
+}

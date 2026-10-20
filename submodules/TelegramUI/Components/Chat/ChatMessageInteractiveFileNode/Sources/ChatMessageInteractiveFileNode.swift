@@ -823,7 +823,21 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             displayTrailingAnimatedDots = true
                             textString = modifiedString
                         } else {
-                            if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty && arguments.incoming {
+                            // MindGram: «Переводить расшифровку» — the transcription in the chosen language.
+                            var mindGramVoiceLanguage: String?
+                            if arguments.associatedData.translateToLanguage == nil && MindGramTranscription.translates && !text.isEmpty && arguments.incoming {
+                                var language = MindGramTranslator.targetLanguage.isEmpty ? arguments.presentationData.strings.baseLanguageCode : MindGramTranslator.targetLanguage
+                                if language.hasSuffix("-raw") {
+                                    language = String(language.dropLast(4))
+                                }
+                                mindGramVoiceLanguage = language
+                                let hasTranslation = arguments.message.attributes.contains(where: { ($0 as? TranslationMessageAttribute)?.toLang == language })
+                                let key = MindGramMessageKey(peerId: arguments.message.id.peerId.toInt64(), namespace: arguments.message.id.namespace, id: arguments.message.id.id)
+                                if !hasTranslation && MindGramTranscription.shouldRequestTranslation(key, toLang: language) {
+                                    let _ = arguments.context.engine.messages.translateMessages(messageIds: [arguments.message.id], fromLang: nil, toLang: language, enableLocalIfPossible: false).startStandalone()
+                                }
+                            }
+                            if let translateToLanguage = arguments.associatedData.translateToLanguage ?? mindGramVoiceLanguage, !text.isEmpty && arguments.incoming {
                                 isTranslating = true
                                 for attribute in arguments.message.attributes {
                                     if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {

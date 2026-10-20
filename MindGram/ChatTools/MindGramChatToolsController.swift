@@ -72,6 +72,8 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             MindGramForward.showsMenuItem = value
         case 71:
             MindGramForward.alwaysHideAuthor = value
+        case 43:
+            MindGramTranscription.translates = value
         case 41:
             MindGramTranscription.alwaysLocal = value
         default:
@@ -166,8 +168,9 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
         entries.append(.toggle(id: 40, section: 4, title: strings.t("Расшифровка без Premium", "Voice to Text Without Premium"), info: strings.t("Голосовые и кружки в текст", "Voice and round messages to text"), value: MindGramTranscription.isEnabled))
         if MindGramTranscription.isEnabled {
             entries.append(.toggle(id: 41, section: 4, title: strings.t("Всегда на устройстве", "Always on Device"), info: strings.t("Даже с Premium, звук не уходит", "Even with Premium, audio stays here"), value: MindGramTranscription.alwaysLocal))
+            entries.append(.toggle(id: 43, section: 4, title: strings.t("Переводить расшифровку", "Translate Transcriptions"), info: strings.t("Голосовые сразу на вашем языке", "Voice messages in your language"), value: MindGramTranscription.translates))
         }
-        entries.append(.footer(id: 42, section: 4, text: strings.t("Распознавание речи iOS на телефоне. В первый раз iOS спросит разрешение. Язык — язык iPhone.", "iOS speech recognition on the phone. iOS asks for permission the first time. The language is the iPhone's.")))
+        entries.append(.footer(id: 45, section: 4, text: strings.t("Распознавание речи iOS на телефоне. В первый раз iOS спросит разрешение. Язык — язык iPhone.", "iOS speech recognition on the phone. iOS asks for permission the first time. The language is the iPhone's.")))
 
         entries.append(.header(id: 49, section: 5, text: strings.t("ПОДТВЕРЖДЕНИЕ ПЕРЕД ОТПРАВКОЙ", "CONFIRM BEFORE SENDING")))
         for (index, kind) in MindGramSendConfirm.Kind.allCases.enumerated() {
