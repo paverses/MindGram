@@ -15,6 +15,10 @@ on:
         options:
           - macos-26
           - macos-15
+      build_number:
+        description: 'Build number (empty: number of published builds + 1)'
+        type: string
+        default: ''
       configuration:
         description: 'Build configuration'
         type: choice
@@ -111,6 +115,7 @@ jobs:
           # MindGram builds are numbered in order: 1, 2, 3... = the number of published builds + 1.
           RELEASES=$(gh release list -R "$GITHUB_REPOSITORY" -L 1000 --json tagName -q 'length')
           BUILD_NUMBER=$(( RELEASES + 1 ))
+          if [ -n "${{ inputs.build_number }}" ]; then BUILD_NUMBER="${{ inputs.build_number }}"; fi
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py \
