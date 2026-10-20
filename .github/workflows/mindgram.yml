@@ -15,6 +15,7 @@ on:
         options:
           - macos-26
           - macos-15
+          - macos-15-intel
       build_number:
         description: 'Build number (empty: number of published builds + 1)'
         type: string
@@ -67,6 +68,25 @@ jobs:
           echo "versions.json wants Xcode $WANTED, using $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
+
+      # versions.json pins the Apple Silicon Bazel binary by SHA-256. On an Intel machine Make.py fetches
+      # the x86_64 binary, so pin that one instead (same version).
+      - name: Bazel for Intel machines
+        if: runner.arch == 'X64'
+        run: |
+          V=$(python3 -c 'import json; print(json.load(open("versions.json"))["bazel"].split(":")[0])')
+          mkdir -p build-input
+          curl -fL -o "build-input/bazel-$V-darwin-x86_64" "https://github.com/bazelbuild/bazel/releases/download/$V/bazel-$V-darwin-x86_64"
+          chmod +x "build-input/bazel-$V-darwin-x86_64"
+          SHA=$(shasum -a 256 "build-input/bazel-$V-darwin-x86_64" | cut -d' ' -f1)
+          python3 - "$V" "$SHA" <<'PY'
+          import json, sys
+          path = "versions.json"
+          data = json.load(open(path))
+          data["bazel"] = sys.argv[1] + ":" + sys.argv[2]
+          json.dump(data, open(path, "w"), indent=4)
+          PY
+          cat versions.json
 
       - name: Write build configuration
         env:
