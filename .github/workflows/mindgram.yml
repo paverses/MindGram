@@ -27,9 +27,6 @@ on:
           - release_arm64
           - debug_arm64
 
-concurrency:
-  group: mindgram-${{ github.ref }}-${{ inputs.runner || 'macos-26' }}
-  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -168,7 +165,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["app"])')
-          gh release create "build-$BUILD_NUMBER" "$IPA_PATH" \
-            --title "MindGram $VERSION ($BUILD_NUMBER)" \
-            --notes "Unsigned MindGram build. Install with Sideloadly or AltStore using your Apple ID." \
-            || gh release upload "build-$BUILD_NUMBER" "$IPA_PATH" --clobber
+          # Several builds may run at once; each takes the next free number instead of overwriting one.
+          TAG_NUMBER=$BUILD_NUMBER
+          while gh release view "build-$TAG_NUMBER" >/dev/null 2>&1; do
+            TAG_NUMBER=$(( TAG_NUMBER + 1 ))
+          done
+          gh release create "build-$TAG_NUMBER" "$IPA_PATH" \
+            --title "MindGram $VERSION ($TAG_NUMBER)" \
+            --notes "Unsigned MindGram build. Install with Sideloadly or AltStore using your Apple ID."
