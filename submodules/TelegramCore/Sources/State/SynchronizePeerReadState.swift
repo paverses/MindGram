@@ -448,7 +448,10 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
 public func mindGramSendReadReceipt(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
     let network = account.network
     let postbox = account.postbox
-    let stateManager = account.stateManager
+    guard let stateManager = account.stateManager else {
+        MindGramLog.error("Режим призрака", "Отправить прочтение: у аккаунта нет stateManager (Account.stateManager = nil)")
+        return .complete()
+    }
     return postbox.transaction { transaction -> PeerReadState? in
         guard let readStates = transaction.getPeerReadStates(peerId) else {
             return nil
