@@ -396,9 +396,11 @@ public struct PresentationResourcesChat {
                     color = theme.chat.inputPanel.actionControlForegroundColor
                 }
                 
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/SendIcon"), color: color) {
-                    image.draw(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) * 0.5), y: floorToScreenPixels((size.height - image.size.height) * 0.5)), size: image.size))
-                }
+                // MindGram: the MindGram logo instead of Telegram's paper plane on the Send button.
+                color.setFill()
+                let logoWidth: CGFloat = 19.0
+                let logoHeight = logoWidth / MindGramLogo.aspectRatio
+                MindGramLogo.path(in: CGRect(x: floorToScreenPixels((size.width - logoWidth) * 0.5), y: floorToScreenPixels((size.height - logoHeight) * 0.5), width: logoWidth, height: logoHeight)).fill()
             })
         })
     }

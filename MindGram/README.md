@@ -104,5 +104,6 @@ screens are built with the shared list engine in `Settings/MindGramList.swift`.
 | Glass on profile buttons | Liquid Glass | `PeerInfoHeaderButtonNode.swift` |
 | Chat preview | Liquid Glass | `SettingsUI/Sources/MindGramChatPreview.swift` (new file) |
 | Hide Settings rows (25) | Разделы меню | `PeerInfoSettingsItems.swift` (filter before `result`), `PeerInfoScreen.swift` (relayout on change), `ChatListNodeEntries.swift` (proxy sponsor) |
+| Send button icon (MindGram logo instead of the paper plane) | — | `TelegramPresentationData/Sources/Resources/PresentationResourcesChat.swift` (`chatInputPanelSendIconImage`) |
 | Notch badge (logo + "indGram" in Unbounded, `Branding/AppBadge@3x.png`, font in `Branding/fonts`, SIL OFL) | — | `TelegramUI/Images.xcassets/Components/AppBadge.imageset`, shown by `Display/Source/WindowContent.swift` |
 | App icons (regular, inverted, Graphite, Paper, Midnight, Sage) and their names | Telegram's Appearance | `AppDelegate.swift`, `ThemeSettingsAppIconItem.swift` (names from `MindGramBranding.iconTitle`), `Telegram/BUILD` (`alternate_icon_folders`), icons in `Branding/AlternateIcons` |
