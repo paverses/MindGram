@@ -62,7 +62,7 @@ func mindGramPhrasesController(context: AccountContext) -> ViewController {
         return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: MindGramPhrases.phrases.count * 31 + MindGramPhrases.triggers.hashValue, build: { size, isDark in
             return MindGramPreviews.phrases(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
         })
-    }))
+    })
 
     let controller = mindGramListController(context: context, title: { $0.t("Быстрые фразы", "Quick Phrases") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []

@@ -126,7 +126,7 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
         return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: mindGramDeletedPreviewRevision(), build: { size, isDark in
             return MindGramPreviews.deleted(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
         })
-    }))
+    })
 
     let controller = mindGramListController(context: context, title: { $0.t("Удалённые и правки", "Deleted & Edited") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
