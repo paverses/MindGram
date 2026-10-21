@@ -5,11 +5,13 @@ import PhotosUI
 /// «Файл»: shown before sending one file picked in Files. Rename it, change its extension, edit music tags
 /// and cover, convert audio / video / images, or edit code and text. «Отправить» hands the new file over.
 public final class MindGramFileEditorController: UINavigationController {
-    public init(url: URL, isRussian: Bool, isDark: Bool, send: @escaping (URL) -> Void) {
-        let root = MindGramFileEditorRootController(url: url, isRussian: isRussian, send: send)
+    public init(url: URL, isRussian: Bool, isDark: Bool, send: @escaping (URL) -> Void, cancel: (() -> Void)? = nil) {
+        let root = MindGramFileEditorRootController(url: url, isRussian: isRussian, send: send, cancel: cancel)
         super.init(rootViewController: root)
         self.overrideUserInterfaceStyle = isDark ? .dark : .light
         self.modalPresentationStyle = .formSheet
+        // Closed only by Cancel or Send, so a cancelled send is always reported.
+        self.isModalInPresentation = true
     }
 
     required init?(coder: NSCoder) {
@@ -26,6 +28,7 @@ private final class MindGramFileEditorRootController: UITableViewController, UIT
     }
 
     private let send: (URL) -> Void
+    private let cancel: (() -> Void)?
     private let isRussian: Bool
     private let workURL: URL?
     private let loadError: String?
@@ -45,8 +48,9 @@ private final class MindGramFileEditorRootController: UITableViewController, UIT
 
     private var sections: [Section] = []
 
-    init(url: URL, isRussian: Bool, send: @escaping (URL) -> Void) {
+    init(url: URL, isRussian: Bool, send: @escaping (URL) -> Void, cancel: (() -> Void)?) {
         self.send = send
+        self.cancel = cancel
         self.isRussian = isRussian
         let name = url.deletingPathExtension().lastPathComponent
         self.baseName = name
@@ -368,7 +372,10 @@ private final class MindGramFileEditorRootController: UITableViewController, UIT
     // MARK: Sending
 
     @objc private func cancelPressed() {
-        self.dismiss(animated: true)
+        let cancel = self.cancel
+        self.dismiss(animated: true, completion: {
+            cancel?()
+        })
     }
 
     private func setWorking(_ working: Bool) {
@@ -407,7 +414,7 @@ private final class MindGramFileEditorRootController: UITableViewController, UIT
             return
         }
 
-        let done: (Result<URL, MindGramConvertError>) -> Void = { [weak self] result in
+        let finish: (Result<URL, MindGramConvertError>) -> Void = { [weak self] result in
             guard let self else {
                 return
             }
@@ -420,6 +427,16 @@ private final class MindGramFileEditorRootController: UITableViewController, UIT
                 })
             case let .failure(error):
                 self.showError(error.description)
+            }
+        }
+        // Converters finish on their own queues; the UI work happens on the main queue.
+        let done: (Result<URL, MindGramConvertError>) -> Void = { result in
+            if Thread.isMainThread {
+                finish(result)
+            } else {
+                DispatchQueue.main.async {
+                    finish(result)
+                }
             }
         }
 

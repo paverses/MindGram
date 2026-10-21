@@ -72,9 +72,7 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
             return nil
         }
     }, customItem: { _, presentationData, section in
-        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 170.0, revision: 0, build: { size, isDark in
-            return MindGramPreviews.ghost(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
-        })
+        return MindGramPreviews.ghost(context: context, sectionId: section)
     })
 
     let controller = mindGramListController(context: context, title: { $0.ghostMode }, arguments: arguments, entries: { _, strings in

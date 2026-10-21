@@ -99,23 +99,4 @@ extension MindGramReport {
         return MindGramCheck(title: "Расшифровка голосовых", tone: .ok, status: "Работает", words: "Голосовые и кружки расшифровываются на iPhone (\(Locale.current.identifier)). Разрешение: \(statusText).", code: code)
     }
 
-    static func roundVideoCheck() -> MindGramCheck {
-        var segmentation = false
-        if #available(iOS 15.0, *) {
-            segmentation = true
-        }
-        let thermal = CIFilter(name: "CIThermal") != nil
-        let effectTitle = MindGramRoundVideo.effect.title(isRussian: true)
-        let code = [
-            "MindGramRoundVideo.isEnabled = \(MindGramRoundVideo.isEnabled), effect = .\(MindGramRoundVideo.effect.rawValue), swipeToSwitch = \(MindGramRoundVideo.swipeToSwitch), strength = \(MindGramRoundVideo.strength)",
-            "VNGeneratePersonSegmentationRequest (iOS 15+) = \(segmentation), CIFilter CIThermal = \(thermal)",
-            "Где: MindGram/RoundVideo (MindGramRoundRenderer) ← submodules/Camera/CameraNeo/Sources/CameraNeo.swift captureOutput, VideoRecorder.swift appendProcessedVideoFrame; VideoMessageCameraScreen.swift (круг и свайпы)",
-            "Эффекты работают в новой камере кружков (CameraNeo); если сервер Telegram выключил её (ios_killswitch_disable_neo_round_camera_v2), эффектов не будет."
-        ]
-        guard MindGramRoundVideo.isEnabled else {
-            return MindGramCheck(title: "Эффекты в кружках", tone: .off, status: "Выключено", words: "Кружки записываются как в Telegram.", code: code)
-        }
-        let swipe = MindGramRoundVideo.swipeToSwitch ? "листает эффекты" : "выключен"
-        return MindGramCheck(title: "Эффекты в кружках", tone: .ok, status: effectTitle, words: "При открытии камеры: \(effectTitle). Свайп по кружку \(swipe).", code: code)
-    }
 }

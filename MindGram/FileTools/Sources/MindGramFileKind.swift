@@ -102,4 +102,13 @@ public extension MindGramFileTools {
 
     /// Telegram's message length limit.
     static let longTextLimit = 4096
+
+    /// «Счётчик символов»: the length of the message being typed or edited, above the message field.
+    static var showsCounter: Bool {
+        get { return UserDefaults.standard.object(forKey: "MindGram.counter.enabled") as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "MindGram.counter.enabled")
+            NotificationCenter.default.post(name: Notification.Name("MindGramSettingsDidChange"), object: nil)
+        }
+    }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import CoreText
 import AsyncDisplayKit
 import TelegramCore
 import Display
@@ -1555,26 +1556,93 @@ public func shouldDisplayInlineDateReactions(message: EngineMessage, isPremium: 
     return false
 }
 
-// MindGram: the color and size of the mark of a kept deleted message (Удалённые и правки).
+// MindGram: the mark of a kept deleted message (Удалённые и правки). The 🗑 emoji can't take a colour, so it is
+// drawn as a trash icon attachment, which TextNode tints with the run's colour: the chosen colour, or the time's.
+private final class MindGramMarkRunData {
+    let ascent: CGFloat
+    let descent: CGFloat
+    let width: CGFloat
+
+    init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+        self.ascent = ascent
+        self.descent = descent
+        self.width = width
+    }
+}
+
+private var mindGramTrashIcons: [CGFloat: UIImage] = [:]
+private let mindGramTrashIconsLock = NSLock()
+
+// Called from the asynchronous layout of message dates, hence the lock.
+private func mindGramTrashIcon(pointSize: CGFloat) -> UIImage? {
+    let key = floor(pointSize * 2.0) / 2.0
+    mindGramTrashIconsLock.lock()
+    defer {
+        mindGramTrashIconsLock.unlock()
+    }
+    if let image = mindGramTrashIcons[key] {
+        return image
+    }
+    guard let symbol = UIImage(systemName: "trash.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: key, weight: .medium)) else {
+        return nil
+    }
+    let size = CGSize(width: ceil(symbol.size.width), height: ceil(symbol.size.height))
+    let image = generateImage(size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPushContext(context)
+        symbol.withTintColor(.black, renderingMode: .alwaysOriginal).draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })?.precomposed().withRenderingMode(.alwaysTemplate)
+    mindGramTrashIcons[key] = image
+    return image
+}
+
 private func mindGramDateAttributedString(_ text: String, font: UIFont, color: UIColor) -> NSAttributedString {
     let result = NSMutableAttributedString(string: text, attributes: [.font: font, .foregroundColor: color])
-    let customColor = MindGramDeleted.parsedMarkColor()
     let scale = CGFloat(MindGramDeleted.markScalePercent) / 100.0
-    guard customColor != nil || scale != 1.0 else {
-        return result
+    var markColor = color
+    if let customColor = MindGramDeleted.parsedMarkColor() {
+        markColor = UIColor(red: customColor.red, green: customColor.green, blue: customColor.blue, alpha: 1.0)
     }
     for isRussian in [true, false] {
         let prefix = MindGramDeleted.timestampPrefix(isRussian: isRussian)
-        if !prefix.isEmpty && text.hasPrefix(prefix) {
-            let range = NSRange(location: 0, length: (prefix as NSString).length)
-            if let customColor {
-                result.addAttribute(.foregroundColor, value: UIColor(red: customColor.red, green: customColor.green, blue: customColor.blue, alpha: 1.0), range: range)
-            }
-            if scale != 1.0 {
-                result.addAttribute(.font, value: font.withSize(font.pointSize * scale), range: range)
-            }
-            break
+        guard !prefix.isEmpty, text.hasPrefix(prefix) else {
+            continue
         }
+        let prefixRange = NSRange(location: 0, length: (prefix as NSString).length)
+        result.addAttribute(.foregroundColor, value: markColor, range: prefixRange)
+        if scale != 1.0 {
+            result.addAttribute(.font, value: font.withSize(font.pointSize * scale), range: prefixRange)
+        }
+        let trash = MindGramDeleted.Mark.trash.prefix
+        if text.hasPrefix(trash), let icon = mindGramTrashIcon(pointSize: font.pointSize * scale) {
+            let runData = MindGramMarkRunData(ascent: font.ascender, descent: font.descender, width: icon.size.width)
+            var callbacks = CTRunDelegateCallbacks(
+                version: kCTRunDelegateCurrentVersion,
+                dealloc: { dataRef in
+                    Unmanaged<MindGramMarkRunData>.fromOpaque(dataRef).release()
+                },
+                getAscent: { dataRef in
+                    return Unmanaged<MindGramMarkRunData>.fromOpaque(dataRef).takeUnretainedValue().ascent
+                },
+                getDescent: { dataRef in
+                    return Unmanaged<MindGramMarkRunData>.fromOpaque(dataRef).takeUnretainedValue().descent
+                },
+                getWidth: { dataRef in
+                    return Unmanaged<MindGramMarkRunData>.fromOpaque(dataRef).takeUnretainedValue().width
+                }
+            )
+            if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runData).toOpaque()) {
+                let iconRange = NSRange(location: 0, length: (trash as NSString).length)
+                result.replaceCharacters(in: iconRange, with: NSAttributedString(string: ">", attributes: [
+                    .font: font,
+                    .attachment: icon,
+                    .foregroundColor: markColor,
+                    NSAttributedString.Key(rawValue: kCTRunDelegateAttributeName as String): runDelegate
+                ]))
+            }
+        }
+        break
     }
     return result
 }

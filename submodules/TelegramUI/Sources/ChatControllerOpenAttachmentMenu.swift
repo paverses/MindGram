@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import AVFoundation
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
@@ -1509,18 +1510,15 @@ extension ChatControllerImpl {
                 if let strongSelf = self, !editingMessage, urls.count == 1, MindGramFileTools.isEnabled {
                     let presentationData = strongSelf.presentationData
                     let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.baseLanguageCode.hasPrefix($0) })
-                    let editor = MindGramFileEditorController(url: urls[0], isRussian: isRussian, isDark: presentationData.theme.overallDarkAppearance, send: { url in
-                        mindGramHandleURLs([url])
+                    let editor = MindGramFileEditorController(url: urls[0], isRussian: isRussian, isDark: presentationData.theme.overallDarkAppearance, send: { [weak self] url in
+                        guard let self else {
+                            return
+                        }
+                        self.mindGramSendLocalFile(url, threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, clearInput: false)
                     })
                     // After the file picker has gone away, on top of whatever is presented.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: { [weak self] in
-                        guard var top = self?.view.window?.rootViewController else {
-                            return
-                        }
-                        while let presented = top.presentedViewController, !presented.isBeingDismissed {
-                            top = presented
-                        }
-                        top.present(editor, animated: true)
+                        self?.mindGramPresentOnTop(editor)
                     })
                 } else {
                     mindGramHandleURLs(urls)
@@ -2442,6 +2440,7 @@ extension ChatControllerImpl {
 
 extension ChatControllerImpl {
     /// MindGram: «Длинный текст — файлом» — the text goes into a file the user names in the «Файл» editor.
+    /// Cancelling the editor puts the text back into the message field.
     func mindGramSendTextAsFile(_ text: String, threadId: Int64?, replyToMessageId: EngineMessageReplySubject?) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MindGramFiles", isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
         let url = directory.appendingPathComponent("message.txt")
@@ -2454,21 +2453,77 @@ extension ChatControllerImpl {
         let presentationData = self.presentationData
         let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.baseLanguageCode.hasPrefix($0) })
         let editor = MindGramFileEditorController(url: url, isRussian: isRussian, isDark: presentationData.theme.overallDarkAppearance, send: { [weak self] fileURL in
-            guard let self, let data = try? Data(contentsOf: fileURL) else {
+            self?.mindGramSendLocalFile(fileURL, threadId: threadId, replyToMessageId: replyToMessageId, clearInput: true)
+        }, cancel: { [weak self] in
+            guard let self else {
                 return
             }
-            let fileId = Int64.random(in: Int64.min ... Int64.max)
-            let resource = LocalFileMediaResource(fileId: fileId, size: Int64(data.count), isSecretRelated: false)
-            self.context.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data)
-            let file = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: guessMimeTypeByFileExtension(fileURL.pathExtension), size: Int64(data.count), attributes: [.FileName(fileName: fileURL.lastPathComponent)], alternativeRepresentations: [])
-            mindGramSendConfirmed = true
-            self.sendMessages([.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
-            mindGramSendConfirmed = false
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                $0.updatedInterfaceState { $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: NSAttributedString(string: text))) }
+            })
         })
+        self.mindGramPresentOnTop(editor)
+    }
+
+    func mindGramPresentOnTop(_ controller: UIViewController) {
         var top = self.view.window?.rootViewController
         while let presented = top?.presentedViewController, !presented.isBeingDismissed {
             top = presented
         }
-        top?.present(editor, animated: true)
+        top?.present(controller, animated: true)
+    }
+
+    /// MindGram: sends a file made by the «Файл» editor. It lives in the app's own folder, so it goes as a local file
+    /// (Telegram's Files path only accepts security-scoped iCloud URLs). Music keeps its title, artist and cover.
+    func mindGramSendLocalFile(_ fileURL: URL, threadId: Int64?, replyToMessageId: EngineMessageReplySubject?, clearInput: Bool) {
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return
+        }
+        let fileId = Int64.random(in: Int64.min ... Int64.max)
+        let resource = LocalFileMediaResource(fileId: fileId, size: Int64(data.count), isSecretRelated: false)
+        self.context.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data, synchronous: true)
+
+        let fileName = fileURL.lastPathComponent
+        let pathExtension = fileURL.pathExtension.lowercased()
+        var attributes: [TelegramMediaFileAttribute] = [.FileName(fileName: fileName)]
+        var previewRepresentations: [TelegramMediaImageRepresentation] = []
+        if ["mp3", "m4a", "m4b", "aac", "wav", "aif", "aiff", "caf", "flac", "ogg", "opus"].contains(pathExtension) {
+            let asset = AVURLAsset(url: fileURL)
+            let seconds = CMTimeGetSeconds(asset.duration)
+            let title = AVMetadataItem.metadataItems(from: asset.commonMetadata, withKey: AVMetadataKey.commonKeyTitle, keySpace: AVMetadataKeySpace.common).first?.stringValue
+            let performer = AVMetadataItem.metadataItems(from: asset.commonMetadata, withKey: AVMetadataKey.commonKeyArtist, keySpace: AVMetadataKeySpace.common).first?.stringValue
+            attributes.append(.Audio(isVoice: false, duration: seconds.isFinite ? Int(seconds) : 0, title: title, performer: performer, waveform: nil))
+            if let artwork = AVMetadataItem.metadataItems(from: asset.commonMetadata, withKey: AVMetadataKey.commonKeyArtwork, keySpace: AVMetadataKeySpace.common).first?.dataValue, let image = UIImage(data: artwork), let jpeg = image.jpegData(compressionQuality: 0.8) {
+                let artworkResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(jpeg.count), isSecretRelated: false)
+                self.context.engine.resources.storeResourceData(id: EngineMediaResource.Id(artworkResource.id), data: jpeg, synchronous: true)
+                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: Int32(image.size.width * image.scale), height: Int32(image.size.height * image.scale)), resource: artworkResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+            }
+        }
+        let file = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: guessMimeTypeByFileExtension(pathExtension), size: Int64(data.count), attributes: attributes, alternativeRepresentations: [])
+        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+
+        self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+            guard let self else {
+                return
+            }
+            self.chatDisplayNode.collapseInput()
+            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                $0.updatedInterfaceState { state in
+                    var state = state.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedPostSuggestionState(nil)
+                    if clearInput {
+                        state = state.withUpdatedEffectiveInputState(ChatTextInputState())
+                    }
+                    return state
+                }
+            })
+        }, nil)
+        self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+            guard let self else {
+                return
+            }
+            mindGramSendConfirmed = true
+            self.sendMessages([message], postpone: postpone)
+            mindGramSendConfirmed = false
+        })
     }
 }

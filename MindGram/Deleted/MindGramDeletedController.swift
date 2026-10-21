@@ -65,7 +65,6 @@ func mindGramDateString(_ timestamp: Int32) -> String {
 /// Удалённые и правки: saved deleted messages, how they look, their history, and edit history.
 func mindGramDeletedController(context: AccountContext) -> ViewController {
     var pushImpl: ((ViewController) -> Void)?
-    var presentUIKitImpl: ((UIViewController) -> Void)?
 
     let arguments = MindGramListArguments(toggle: { id, value in
         switch id {
@@ -87,31 +86,13 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
     }, open: { id in
         let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
         switch id {
-        case 22:
-            pushImpl?(mindGramPickerController(context: context, title: strings.t("Значок", "Mark"), footer: strings.t("Значок стоит перед временем удалённого сообщения.", "The mark goes before the time of a deleted message."), options: MindGramDeleted.Mark.allCases.map { ($0.rawValue, markTitle($0, strings)) }, selected: { MindGramDeleted.mark.rawValue }, select: { value in
-                if let mark = MindGramDeleted.Mark(rawValue: value) {
-                    MindGramDeleted.mark = mark
-                }
-            }))
-        case 24:
-            let alert = UIAlertController(title: strings.t("Цвет значка", "Mark Color"), message: strings.t("HEX (#FF3B30) или RGB (255,59,48). Пусто — цвет времени. Эмодзи 🗑 и 👻 iOS не перекрашивает.", "HEX (#FF3B30) or RGB (255,59,48). Empty: the time's color. iOS can't recolor 🗑 and 👻 emoji."), preferredStyle: .alert)
-            alert.addTextField { field in
-                field.text = MindGramDeleted.markColor
-                field.placeholder = "#FF3B30"
-                field.autocapitalizationType = .allCharacters
-            }
-            alert.addAction(UIAlertAction(title: strings.t("Отмена", "Cancel"), style: .cancel))
-            alert.addAction(UIAlertAction(title: strings.t("Сохранить", "Save"), style: .default, handler: { [weak alert] _ in
-                MindGramDeleted.markColor = alert?.textFields?.first?.text ?? ""
-            }))
-            presentUIKitImpl?(alert)
-        case 25:
+        case 27:
             pushImpl?(mindGramPickerController(context: context, title: strings.t("Размер значка", "Mark Size"), options: [70, 85, 100, 120, 140, 170, 200].map { ("\($0)", "\($0) %") }, selected: { "\(MindGramDeleted.markScalePercent)" }, select: { value in
                 if let value = Int(value) {
                     MindGramDeleted.markScalePercent = value
                 }
             }))
-        case 26:
+        case 28:
             pushImpl?(mindGramPickerController(context: context, title: strings.t("Прозрачность", "Opacity"), options: [100, 85, 70, 55, 40, 25].map { ("\($0)", "\($0) %") }, selected: { "\(MindGramDeleted.opacityPercent)" }, select: { value in
                 if let value = Int(value) {
                     MindGramDeleted.opacityPercent = value
@@ -122,10 +103,13 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
         default:
             break
         }
-    }, customItem: { _, presentationData, section in
-        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: mindGramDeletedPreviewRevision(), build: { size, isDark in
-            return MindGramPreviews.deleted(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
-        })
+    }, customItem: { key, presentationData, section in
+        if key == "palette" {
+            return mindGramColorPaletteItem(presentationData: presentationData, sectionId: section, selected: MindGramDeleted.markColor, select: { value in
+                MindGramDeleted.markColor = value
+            })
+        }
+        return MindGramPreviews.deleted(context: context, sectionId: section)
     })
 
     let controller = mindGramListController(context: context, title: { $0.t("Удалённые и правки", "Deleted & Edited") }, arguments: arguments, entries: { _, strings in
@@ -142,13 +126,12 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
             entries.append(.header(id: 20, section: 2, text: strings.t("В ЧАТЕ", "IN CHAT")))
             entries.append(.toggle(id: 21, section: 2, title: strings.t("Показывать в чате", "Show in Chat"), info: strings.t("Иначе только в истории", "Otherwise only in the history"), value: MindGramDeleted.showsInChat))
             if MindGramDeleted.showsInChat {
-                entries.append(.value(id: 22, section: 2, title: strings.t("Значок", "Mark"), value: MindGramDeleted.mark.prefix.isEmpty ? strings.t("Слово", "Word") : MindGramDeleted.mark.prefix))
-                if MindGramDeleted.mark != .word {
-                    entries.append(.toggle(id: 23, section: 2, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом со значком", "A word next to the mark"), value: MindGramDeleted.showsWord))
-                }
-                entries.append(.value(id: 24, section: 2, title: strings.t("Цвет значка", "Mark Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor))
-                entries.append(.value(id: 25, section: 2, title: strings.t("Размер значка", "Mark Size"), value: "\(MindGramDeleted.markScalePercent) %"))
-                entries.append(.value(id: 26, section: 2, title: strings.t("Прозрачность сообщений", "Message Opacity"), value: "\(MindGramDeleted.opacityPercent) %"))
+                entries.append(.toggle(id: 23, section: 2, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord))
+                entries.append(.header(id: 24, section: 22, text: strings.t("ЦВЕТ КОРЗИНЫ", "TRASH COLOR")))
+                entries.append(.custom(id: 25, section: 22, key: "palette", revision: MindGramDeleted.markColor.hashValue))
+                entries.append(.footer(id: 26, section: 22, text: strings.t("Первый кружок — цвет времени.", "The first circle is the time's colour.")))
+                entries.append(.value(id: 27, section: 23, title: strings.t("Размер корзины", "Trash Size"), value: "\(MindGramDeleted.markScalePercent) %"))
+                entries.append(.value(id: 28, section: 23, title: strings.t("Прозрачность сообщений", "Message Opacity"), value: "\(MindGramDeleted.opacityPercent) %"))
             }
         }
         entries.append(.value(id: 30, section: 3, title: strings.t("История удалённых", "Deleted History"), value: "\(MindGramDeleted.records.count)"))
@@ -161,9 +144,6 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
     })
     pushImpl = { [weak controller] c in
         controller?.push(c)
-    }
-    presentUIKitImpl = { [weak controller] c in
-        controller?.present(c, animated: true)
     }
     return controller
 }

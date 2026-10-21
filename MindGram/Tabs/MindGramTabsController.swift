@@ -53,7 +53,8 @@ func mindGramTabsController(context: AccountContext) -> ViewController {
                 strings: presentationData.strings,
                 showContacts: !MindGramSettings.isOn(.hideContactsTab),
                 showCalls: showCallsTab.with { $0 },
-                revision: MindGramSettings.navbarHeightPercent * 1000 + MindGramSettings.navbarWidthPercent
+                revision: MindGramSettings.navbarHeightPercent * 1000 + MindGramSettings.navbarWidthPercent,
+                tabBarController: (context.sharedContext.mainWindow?.viewController as? NavigationController)?.viewControllers.first as? TabBarController
             )), sectionId: section)
         case "height", "width":
             let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })

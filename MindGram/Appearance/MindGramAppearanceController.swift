@@ -62,9 +62,7 @@ func mindGramAppearanceController(context: AccountContext) -> ViewController {
             MindGramSettings.set(experimentToggles[index], value)
         }
     }, customItem: { _, presentationData, section in
-        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 230.0, revision: experimentToggles.reduce(0, { $0 * 2 + (MindGramSettings.isOn($1) ? 1 : 0) }), build: { size, isDark in
-            return MindGramPreviews.experiments(size: size, isDark: isDark)
-        })
+        return MindGramPreviews.appearance(context: context, sectionId: section)
     })
 
     let controller = mindGramListController(context: context, title: { $0.appearance }, arguments: arguments, extraUpdates: accountPeer, entries: { _, strings in

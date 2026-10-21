@@ -12,7 +12,6 @@ swift_library(
         "//MindGram/Ghost:MindGramGhost",
         "//MindGram/Messages:MindGramMessages",
         "//MindGram/Translator:MindGramTranslator",
-        "//MindGram/RoundVideo:MindGramRoundVideo",
     ],
     copts = [
         "-warnings-as-errors",

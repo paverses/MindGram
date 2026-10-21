@@ -5,7 +5,6 @@ import CoreMedia
 import CoreVideo
 import VideoToolbox
 import Camera
-import MindGramRoundVideo
 
 private extension CMSampleBuffer {
     var presentationTime: CMTime {
@@ -619,9 +618,7 @@ final class VideoRecorder {
             return
         }
 
-        // MindGram: the round video effect (Кружки).
-        let pixelBuffer = MindGramRoundVideo.processRecordedFrame(processedFrame.pixelBuffer)
-        guard videoAdaptor.append(pixelBuffer, withPresentationTime: frame.presentationTime) else {
+        guard videoAdaptor.append(processedFrame.pixelBuffer, withPresentationTime: frame.presentationTime) else {
             if self.assetWriter?.error != nil {
                 self.fail()
             }

@@ -8,7 +8,7 @@ import AccountContext
 import MindGramCore
 
 /// Быстрые фразы: the list (by folders), the trigger symbols, and the editor.
-func mindGramPhrasesController(context: AccountContext) -> ViewController {
+public func mindGramPhrasesController(context: AccountContext) -> ViewController {
     var presentUIKitImpl: ((UIViewController) -> Void)?
 
     let openEditor: (MindGramPhrases.Phrase?) -> Void = { phrase in
@@ -59,9 +59,7 @@ func mindGramPhrasesController(context: AccountContext) -> ViewController {
             presentUIKitImpl?(sheet)
         }
     }, customItem: { _, presentationData, section in
-        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: MindGramPhrases.phrases.count * 31 + MindGramPhrases.triggers.hashValue, build: { size, isDark in
-            return MindGramPreviews.phrases(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
-        })
+        return MindGramPreviews.phrases(context: context, sectionId: section)
     })
 
     let controller = mindGramListController(context: context, title: { $0.t("Быстрые фразы", "Quick Phrases") }, arguments: arguments, entries: { _, strings in

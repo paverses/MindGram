@@ -31,8 +31,41 @@ private func scopeTitle(_ scope: MindGramSelfDestruct.Scope, _ strings: MindGram
     }
 }
 
-/// Чат и перевод: translators and auto-translation, self-destructing messages, tap actions, transcription.
-func mindGramChatToolsController(context: AccountContext) -> ViewController {
+/// The pages MindGram's chat settings are split into; each shows some of the sections below.
+enum MindGramChatToolsPage {
+    /// Taps and swipes, send confirmations, forwarding, self-destruct, the character counter.
+    case messages
+    /// Translators, auto-translation, own messages.
+    case translation
+    /// Voice transcription, bleeping, files and long texts.
+    case media
+
+    var sections: Set<Int32> {
+        switch self {
+        case .messages:
+            return [2, 3, 5, 6, 9]
+        case .translation:
+            return [0, 1]
+        case .media:
+            return [4, 7, 8]
+        }
+    }
+
+    func title(_ strings: MindGramStrings) -> String {
+        switch self {
+        case .messages:
+            return strings.t("Сообщения", "Messages")
+        case .translation:
+            return strings.t("Перевод", "Translation")
+        case .media:
+            return strings.t("Голосовые и файлы", "Voice & Files")
+        }
+    }
+}
+
+/// Chat settings: translators and auto-translation, self-destructing messages, taps and swipes, transcription,
+/// bleeping, files — one `page` of them at a time.
+func mindGramChatToolsController(context: AccountContext, page: MindGramChatToolsPage) -> ViewController {
     var pushImpl: ((ViewController) -> Void)?
     var presentUIKitImpl: ((UIViewController) -> Void)?
     var showTranslateButton = false
@@ -87,6 +120,8 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             MindGramFileTools.longTextAsFile = value
         case 90:
             MindGramFileTools.isEnabled = value
+        case 95:
+            MindGramFileTools.showsCounter = value
         case 41:
             MindGramTranscription.alwaysLocal = value
         default:
@@ -164,12 +199,17 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             break
         }
     }, customItem: { _, presentationData, section in
-        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: 0, build: { size, isDark in
-            return MindGramPreviews.chatTools(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
-        })
+        switch page {
+        case .translation:
+            return MindGramPreviews.chatTools(context: context, sectionId: section)
+        case .messages:
+            return MindGramPreviews.appearance(context: context, sectionId: section)
+        case .media:
+            return MindGramPreviews.media(context: context, sectionId: section)
+        }
     })
 
-    let controller = mindGramListController(context: context, title: { $0.t("Чат и перевод", "Chat & Translation") }, arguments: arguments, extraUpdates: translationSettings, entries: { _, strings in
+    let controller = mindGramListController(context: context, title: { page.title($0) }, arguments: arguments, extraUpdates: translationSettings, entries: { _, strings in
         var entries: [MindGramListEntry] = []
         entries.append(.custom(id: -10, section: -1, key: "preview", revision: 0))
 
@@ -237,7 +277,10 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
         entries.append(.toggle(id: 90, section: 8, title: strings.t("Редактор файлов", "File Editor"), info: strings.t("Имя, формат, теги перед отправкой", "Name, format, tags before sending"), value: MindGramFileTools.isEnabled))
         entries.append(.toggle(id: 92, section: 8, title: strings.t("Длинный текст — файлом", "Long Text as File"), info: strings.t("Больше 4096 символов — одним файлом", "Over 4096 characters: one file"), value: MindGramFileTools.longTextAsFile))
         entries.append(.footer(id: 93, section: 8, text: strings.t("Файл из «Файлов» открывается в редакторе: переименовать, сменить расширение, изменить код (py, ts, js, mjs и ещё ~80 форматов), теги и обложку музыки, конвертировать звук (MP3, M4A, WAV, AIFF, CAF), видео и картинки.", "A file from Files opens in the editor: rename it, change its extension, edit code (py, ts, js, mjs and ~80 more), music tags and cover, convert audio (MP3, M4A, WAV, AIFF, CAF), video and images.")))
-        return entries
+        entries.append(.header(id: 94, section: 9, text: strings.t("СЧЁТЧИК СИМВОЛОВ", "CHARACTER COUNTER")))
+        entries.append(.toggle(id: 95, section: 9, title: strings.t("Счётчик символов", "Character Counter"), info: strings.t("Над полем ввода, пока пишете", "Above the message field while you type"), value: MindGramFileTools.showsCounter))
+        entries.append(.footer(id: 96, section: 9, text: strings.t("Показывает, сколько символов в сообщении и сколько осталось до лимита Telegram (4096). Работает и при редактировании.", "Shows how many characters the message has and how many are left before Telegram's limit (4096). Works while editing too.")))
+        return entries.filter { $0.stableId == -10 || page.sections.contains($0.section) }
     })
     presentUIKitImpl = { [weak controller] c in
         controller?.present(c, animated: true)

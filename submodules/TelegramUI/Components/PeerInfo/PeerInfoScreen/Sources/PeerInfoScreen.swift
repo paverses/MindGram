@@ -6014,6 +6014,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
 
     // MindGram: "Фон из аватарки" — the blurred photo behind the header buttons and the first rows; scrolls with them.
     private var mindGramBackdrop: MindGramAvatarBackdropView?
+    private var mindGramPhotoFadeMask: CAGradientLayer?
     private let mindGramBackdropDisposable = MetaDisposable()
 
     // MindGram: "Обои профиля" — a picture behind your profile and Settings (or every profile), fixed while scrolling.
@@ -6043,6 +6044,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func mindGramUpdateBackdrop() {
         self.mindGramUpdateWallpaper()
         guard MindGramSettings.isOn(.avatarBackdrop), !self.isMediaOnly, let (layout, _) = self.validLayout, let peer = self.data?.peer, let representation = peer.largeProfileImage ?? peer.smallProfileImage else {
+            if self.mindGramPhotoFadeMask != nil {
+                self.mindGramPhotoFadeMask = nil
+                self.headerNode.avatarListNode.listContainerNode.layer.mask = nil
+            }
             if let backdrop = self.mindGramBackdrop {
                 self.mindGramBackdrop = nil
                 self.mindGramBackdropDisposable.set(nil)
@@ -6064,8 +6069,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self.view.insertSubview(backdrop, at: 0)
             }
         }
-        let height = layout.size.width + 460.0
-        backdrop.frame = CGRect(x: 0.0, y: -self.scrollNode.view.contentOffset.y, width: layout.size.width, height: height)
+        backdrop.frame = CGRect(origin: CGPoint(), size: layout.size)
+        
+        // The large photo dissolves into the backdrop instead of ending on a hard edge.
+        let listContainerLayer = self.headerNode.avatarListNode.listContainerNode.layer
+        let fadeMask: CAGradientLayer
+        if let current = self.mindGramPhotoFadeMask {
+            fadeMask = current
+        } else {
+            fadeMask = MindGramAvatarBackdropView.makePhotoFadeMask()
+            self.mindGramPhotoFadeMask = fadeMask
+            listContainerLayer.mask = fadeMask
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fadeMask.frame = listContainerLayer.bounds
+        CATransaction.commit()
 
         let key = representation.resource.id.stringRepresentation
         if backdrop.imageKey != key {

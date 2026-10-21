@@ -32,7 +32,6 @@ enum MindGramReport {
             self.translatorCheck(),
             self.selfDestructCheck(),
             self.transcriptionCheck(),
-            self.roundVideoCheck(),
             self.appGroupCheck(),
             self.iconsCheck(),
             self.settingsCheck(),

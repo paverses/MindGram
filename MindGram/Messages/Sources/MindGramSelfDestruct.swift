@@ -178,6 +178,21 @@ public extension MindGramTranscription {
         set { MindGramDefaults.setBool("MindGram.transcription.translate", newValue) }
     }
 
+    /// Chats where «Показать оригинал» was pressed in the translation bar: their voice transcriptions stay
+    /// untranslated too, until «Перевести» is pressed again.
+    static func showsOriginal(peerId: Int64) -> Bool {
+        return (UserDefaults.standard.array(forKey: "MindGram.transcription.originalChats") as? [NSNumber] ?? []).contains(where: { $0.int64Value == peerId })
+    }
+
+    static func setShowsOriginal(peerId: Int64, _ value: Bool) {
+        var chats = (UserDefaults.standard.array(forKey: "MindGram.transcription.originalChats") as? [NSNumber] ?? []).map { $0.int64Value }
+        chats.removeAll(where: { $0 == peerId })
+        if value {
+            chats.append(peerId)
+        }
+        UserDefaults.standard.set(chats.map { NSNumber(value: $0) }, forKey: "MindGram.transcription.originalChats")
+    }
+
     private static let requestedLock = NSLock()
     private static var requested = Set<String>()
 

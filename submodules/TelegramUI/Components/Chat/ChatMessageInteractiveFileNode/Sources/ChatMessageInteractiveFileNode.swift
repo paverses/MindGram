@@ -825,7 +825,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else {
                             // MindGram: «Переводить расшифровку» — the transcription in the chosen language.
                             var mindGramVoiceLanguage: String?
-                            if arguments.associatedData.translateToLanguage == nil && MindGramTranscription.translates && !text.isEmpty && arguments.incoming {
+                            if arguments.associatedData.translateToLanguage == nil && MindGramTranscription.translates && !MindGramTranscription.showsOriginal(peerId: arguments.message.id.peerId.toInt64()) && !text.isEmpty && arguments.incoming {
                                 var language = MindGramTranslator.targetLanguage.isEmpty ? arguments.presentationData.strings.baseLanguageCode : MindGramTranslator.targetLanguage
                                 if language.hasSuffix("-raw") {
                                     language = String(language.dropLast(4))

@@ -166,11 +166,30 @@ public enum MindGramTranslator {
             completion(.success((texts, nil)))
             return
         }
+        // An empty or unknown source language means "detect it"; an empty target falls back to the device language.
+        let source: String? = fromLang.flatMap { $0.isEmpty || $0 == "und" ? nil : $0 }
+        var target = toLang.isEmpty ? (Locale.preferredLanguages.first.map { String($0.prefix(2)) } ?? "en") : toLang
+        if target.isEmpty {
+            target = "en"
+        }
         switch provider {
         case .microsoft:
-            MindGramMicrosoftTranslator.translate(texts: texts, fromLang: fromLang, toLang: toLang, completion: completion)
+            MindGramMicrosoftTranslator.translate(texts: texts, fromLang: source, toLang: target, completion: completion)
         default:
-            MindGramGoogleTranslator.translate(texts: texts, fromLang: fromLang, toLang: toLang, completion: completion)
+            // Google's free client fails now and then; Microsoft takes over for that request.
+            MindGramGoogleTranslator.translate(texts: texts, fromLang: source, toLang: target, completion: { result in
+                if case .failure = result {
+                    MindGramMicrosoftTranslator.translate(texts: texts, fromLang: source, toLang: target, completion: { fallback in
+                        if case .success = fallback {
+                            completion(fallback)
+                        } else {
+                            completion(result)
+                        }
+                    })
+                } else {
+                    completion(result)
+                }
+            })
         }
     }
 
@@ -239,8 +258,8 @@ enum MindGramGoogleTranslator {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded;charset=utf-8", forHTTPHeaderField: "Content-Type")
         let source = fromLang.map(MindGramTranslator.serviceCode) ?? "auto"
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
+        // Form encoding: only unreserved ASCII stays as is (CharacterSet.alphanumerics would let Cyrillic through raw).
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
         let body = "sl=\(source)&tl=\(MindGramTranslator.serviceCode(toLang))&q=\(text.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")"
         request.httpBody = body.data(using: .utf8)
 

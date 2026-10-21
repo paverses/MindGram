@@ -6,7 +6,6 @@ import CoreVideo
 import SwiftSignalKit
 import DeviceModel
 import Camera
-import MindGramRoundVideo
 
 private let roundVideoFrameRate: Double = 30.0
 
@@ -1020,11 +1019,6 @@ extension CameraNeo: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudi
             }
         } else {
             position = self.singleMediaPosition
-        }
-
-        // MindGram: the live circle with the round video effect (Кружки).
-        if !self.useMultiCam, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-            MindGramRoundVideo.handleCameraFrame(pixelBuffer, front: position == .front)
         }
 
         if !self.useMultiCam, !self.singleFramesEnabled {

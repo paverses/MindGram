@@ -90,8 +90,9 @@ public enum MindGramDeleted {
         set { MindGramDefaults.setBool("MindGram.deleted.showInChat", newValue) }
     }
 
+    /// The mark is always the trash icon (drawn in the chosen colour); the other marks were removed.
     public static var mark: Mark {
-        get { return Mark(rawValue: MindGramDefaults.string("MindGram.deleted.mark", default: Mark.trash.rawValue)) ?? .trash }
+        get { return .trash }
         set { MindGramDefaults.setString("MindGram.deleted.mark", newValue.rawValue) }
     }
 
@@ -101,8 +102,7 @@ public enum MindGramDeleted {
         set { MindGramDefaults.setBool("MindGram.deleted.word", newValue) }
     }
 
-    /// Color of the mark (and "удалено"): "#FF3B30", "FF3B30" or "255,59,48"; empty means the time's own color.
-    /// Emoji marks (🗑 👻) keep their colors — iOS can't tint emoji.
+    /// Color of the mark (and "удалено") from the palette, as "#FF3B30"; empty means the time's own color.
     public static var markColor: String {
         get { return MindGramDefaults.string("MindGram.deleted.markColor", default: "") }
         set { MindGramDefaults.setString("MindGram.deleted.markColor", newValue) }
@@ -173,10 +173,22 @@ public enum MindGramDeleted {
         defer {
             self.lock.unlock()
         }
+        if self.previewKeys.contains(key) {
+            return true
+        }
         if self.cachedKeys == nil {
             self.cachedKeys = self.file.read { Set($0.map(\.key)) }
         }
         return self.cachedKeys?.contains(key) ?? false
+    }
+
+    /// Messages of a settings preview drawn as deleted (they are not real messages).
+    private static var previewKeys: Set<MindGramMessageKey> = []
+
+    public static func addPreviewKey(_ key: MindGramMessageKey) {
+        self.lock.lock()
+        self.previewKeys.insert(key)
+        self.lock.unlock()
     }
 
     /// All records, newest deletion first.

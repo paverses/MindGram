@@ -11502,8 +11502,52 @@ private func mindGramLongText(_ messages: [EnqueueMessage]) -> (text: String, th
 // MindGram: «Быстрые фразы» — the list above the message field and inserting a phrase.
 private var mindGramPhrasesOverlayKey: UInt8 = 0
 
+private var mindGramCounterKey: UInt8 = 0
+
 extension ChatControllerImpl {
+    /// MindGram: «Счётчик символов» — the length of the message being typed or edited, at the right edge just
+    /// above the message field. Returns the height it takes there, so the phrases list goes above it.
+    func mindGramUpdateCounter() -> CGFloat {
+        let counter = objc_getAssociatedObject(self, &mindGramCounterKey) as? UIVisualEffectView
+        let length = (self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string as NSString).length
+        guard self.isNodeLoaded, MindGramFileTools.showsCounter, length > 0, let panel = self.chatDisplayNode.inputPanelNode else {
+            counter?.removeFromSuperview()
+            objc_setAssociatedObject(self, &mindGramCounterKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            return 0.0
+        }
+        let theme = self.presentationData.theme
+        let view: UIVisualEffectView
+        if let counter {
+            view = counter
+        } else {
+            view = UIVisualEffectView(effect: UIBlurEffect(style: theme.overallDarkAppearance ? .systemThinMaterialDark : .systemThinMaterialLight))
+            view.isUserInteractionEnabled = false
+            view.layer.cornerRadius = 10.0
+            view.layer.cornerCurve = .continuous
+            view.clipsToBounds = true
+            let label = UILabel()
+            label.tag = 1
+            label.font = UIFont.monospacedDigitSystemFont(ofSize: 12.0, weight: .medium)
+            label.textAlignment = .center
+            view.contentView.addSubview(label)
+            self.view.addSubview(view)
+            objc_setAssociatedObject(self, &mindGramCounterKey, view, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+        let limit = MindGramFileTools.longTextLimit
+        let label = view.contentView.viewWithTag(1) as? UILabel
+        label?.text = length > limit ? "\(length) / \(limit) · +\(length - limit)" : "\(length) / \(limit)"
+        label?.textColor = length > limit ? theme.list.itemDestructiveColor : theme.list.itemSecondaryTextColor
+        let size = label?.sizeThatFits(CGSize(width: 200.0, height: 20.0)) ?? CGSize(width: 60.0, height: 14.0)
+        let panelFrame = panel.view.convert(panel.bounds, to: self.view)
+        let width = ceil(size.width) + 16.0
+        view.frame = CGRect(x: self.view.bounds.width - width - 16.0, y: panelFrame.minY - 26.0, width: width, height: 20.0)
+        label?.frame = view.bounds
+        self.view.bringSubviewToFront(view)
+        return 26.0
+    }
+
     func mindGramUpdatePhrases() {
+        let counterHeight = self.mindGramUpdateCounter()
         let overlay = objc_getAssociatedObject(self, &mindGramPhrasesOverlayKey) as? MindGramPhrasesOverlay
         let text = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
         guard self.isNodeLoaded, let query = MindGramPhrases.query(in: text) else {
@@ -11521,20 +11565,30 @@ extension ChatControllerImpl {
         if let overlay {
             view = overlay
         } else {
-            view = MindGramPhrasesOverlay(isDark: self.presentationData.theme.overallDarkAppearance)
+            let isRussian = ["ru", "uk", "be"].contains(where: { self.presentationData.strings.baseLanguageCode.hasPrefix($0) })
+            view = MindGramPhrasesOverlay(theme: self.presentationData.theme, buttonTitle: isRussian ? "Настроить фразы" : "Edit Phrases")
             view.select = { [weak self] phrase in
                 self?.mindGramInsertPhrase(phrase)
+            }
+            view.openSettings = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.view.endEditing(true)
+                self.push(mindGramPhrasesController(context: self.context))
             }
             self.view.addSubview(view)
             objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, view, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
-        view.update(phrases: matches, trigger: query.trigger)
-        var panelTop = self.view.bounds.height - 120.0
+        view.update(phrases: matches, trigger: query.trigger, theme: self.presentationData.theme)
+        // Like inline bot results: right above the message field, as wide as it.
+        var panelFrame = CGRect(x: 8.0, y: self.view.bounds.height - 120.0, width: self.view.bounds.width - 16.0, height: 0.0)
         if let panel = self.chatDisplayNode.inputPanelNode {
-            panelTop = panel.view.convert(panel.bounds, to: self.view).minY
+            panelFrame = panel.view.convert(panel.bounds, to: self.view)
         }
-        let height = view.preferredHeight
-        view.frame = CGRect(x: 8.0, y: panelTop - height - 6.0, width: self.view.bounds.width - 16.0, height: height)
+        let sideInset = max(8.0, panelFrame.minX + 8.0)
+        let height = min(view.preferredHeight, max(120.0, panelFrame.minY - self.view.safeAreaInsets.top - 60.0))
+        view.frame = CGRect(x: sideInset, y: panelFrame.minY - counterHeight - height - 6.0, width: self.view.bounds.width - sideInset * 2.0, height: height)
         self.view.bringSubviewToFront(view)
     }
 

@@ -14,8 +14,10 @@ final class MindGramTabBarPreviewComponent: Component {
     let showContacts: Bool
     let showCalls: Bool
     let revision: Int
+    let tabBarController: TabBarController?
 
-    init(theme: PresentationTheme, strings: PresentationStrings, showContacts: Bool, showCalls: Bool, revision: Int) {
+    init(theme: PresentationTheme, strings: PresentationStrings, showContacts: Bool, showCalls: Bool, revision: Int, tabBarController: TabBarController? = nil) {
+        self.tabBarController = tabBarController
         self.theme = theme
         self.strings = strings
         self.showContacts = showContacts
@@ -32,6 +34,16 @@ final class MindGramTabBarPreviewComponent: Component {
 
         func update(component: MindGramTabBarPreviewComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             var items: [TabBarComponent.Item] = []
+            // The app's real tabs (their animated icons, the account photo on Settings), as the bar shows them.
+            var selectedId = AnyHashable("settings")
+            if let tabBarController = component.tabBarController {
+                for controller in tabBarController.controllers {
+                    items.append(TabBarComponent.Item(content: .tabBarItem(controller.tabBarItem), action: { _ in }, doubleTapAction: nil, contextAction: nil))
+                }
+                if let last = tabBarController.controllers.last {
+                    selectedId = AnyHashable(ObjectIdentifier(last.tabBarItem))
+                }
+            }
             func add(_ id: String, _ title: String, _ icon: String) {
                 items.append(TabBarComponent.Item(
                     content: .customItem(TabBarComponent.Item.Content.CustomItem(id: AnyHashable(id), title: title, icon: .bundleIcon(name: icon))),
@@ -40,14 +52,16 @@ final class MindGramTabBarPreviewComponent: Component {
                     contextAction: nil
                 ))
             }
-            if component.showContacts {
-                add("contacts", component.strings.Contacts_TabTitle, "Chat List/Tabs/IconContacts")
+            if items.isEmpty {
+                if component.showContacts {
+                    add("contacts", component.strings.Contacts_TabTitle, "Chat List/Tabs/IconContacts")
+                }
+                if component.showCalls {
+                    add("calls", component.strings.Calls_TabTitle, "Chat List/Tabs/IconCalls")
+                }
+                add("chats", component.strings.DialogList_TabTitle, "Chat List/Tabs/IconChats")
+                add("settings", component.strings.Settings_Title, "Chat List/Tabs/IconSettings")
             }
-            if component.showCalls {
-                add("calls", component.strings.Calls_TabTitle, "Chat List/Tabs/IconCalls")
-            }
-            add("chats", component.strings.DialogList_TabTitle, "Chat List/Tabs/IconChats")
-            add("settings", component.strings.Settings_Title, "Chat List/Tabs/IconSettings")
 
             // Same width rule as the real tab bar (TabBarControllerNode): default width × "Ширина навбара".
             let defaultWidth = availableSize.width - 16.0 * 2.0
@@ -61,7 +75,7 @@ final class MindGramTabBarPreviewComponent: Component {
                     strings: component.strings,
                     items: items,
                     search: nil,
-                    selectedId: AnyHashable("settings"),
+                    selectedId: selectedId,
                     outerInsets: UIEdgeInsets()
                 )),
                 environment: {},
