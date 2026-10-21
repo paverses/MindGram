@@ -100,7 +100,7 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
         entries.append(.toggle(id: 1, section: 0, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord))
 
         entries.append(.header(id: 9, section: 1, text: strings.t("КОРЗИНА", "TRASH")))
-        entries.append(.value(id: 10, section: 1, title: strings.t("Цвет корзины", "Trash Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor, revision: revision.finalize()))
+        entries.append(.value(id: 10, section: 1, title: strings.t("Цвет корзины", "Trash Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor))
         if !MindGramDeleted.markColor.isEmpty {
             entries.append(.action(id: 11, section: 1, title: strings.t("Цвет как у времени", "Same as the Time")))
         }
