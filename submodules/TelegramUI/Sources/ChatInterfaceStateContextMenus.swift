@@ -1359,6 +1359,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 controllerInteraction.navigationController()?.pushViewController(mindGramEditHistoryController(context: context, versions: mindGramVersions, currentText: message.text), animated: true)
             })))
         }
+        // MindGram: «Экспорт чата» в .txt / .html (MindGram/Export).
+        if !chatPresentationInterfaceState.copyProtectionEnabled, let exportPeer = message.peers[message.id.peerId].flatMap(EnginePeer.init) {
+            let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
+            actions.append(.action(ContextMenuActionItem(text: isRussian ? "Экспорт чата" : "Export Chat", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                f(.default)
+                mindGramStartChatExport(context: context, peer: exportPeer, present: { controller in
+                    controllerInteraction.navigationController()?.present(controller, animated: true)
+                }, presentInCurrent: { controller in
+                    controllerInteraction.presentControllerInCurrent(controller, nil)
+                })
+            })))
+        }
 
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || richMessageMarkdown != nil || (resourceAvailable && isImage) || diceEmoji != nil {

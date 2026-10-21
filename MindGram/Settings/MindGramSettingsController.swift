@@ -19,9 +19,10 @@ private enum MindGramMenuItem: Int32 {
     case ghost = 5
     case deleted = 6
     case chatTools = 7
-    case circles = 8
-    case report = 9
-    case footer = 10
+    case phrases = 8
+    case circles = 9
+    case report = 10
+    case footer = 11
 }
 
 /// The "MindGram" screen opened from Settings: one row per MindGram section.
@@ -49,6 +50,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             pushImpl?(mindGramDeletedController(context: context))
         case .chatTools:
             pushImpl?(mindGramChatToolsController(context: context))
+        case .phrases:
+            pushImpl?(mindGramPhrasesController(context: context))
         case .circles:
             pushImpl?(mindGramCirclesController(context: context))
         case .report:
@@ -74,6 +77,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             return PresentationResourcesSettings.savedMessages
         case "chatTools":
             return PresentationResourcesSettings.language
+        case "phrases":
+            return PresentationResourcesSettings.stickers
         case "circles":
             return PresentationResourcesSettings.videos
         case "report":
@@ -94,6 +99,7 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             .disclosure(id: MindGramMenuItem.ghost.rawValue, section: section, title: strings.ghostMode, icon: "ghost"),
             .disclosure(id: MindGramMenuItem.deleted.rawValue, section: section, title: strings.t("Удалённые и правки", "Deleted & Edited"), icon: "deleted"),
             .disclosure(id: MindGramMenuItem.chatTools.rawValue, section: section, title: strings.t("Чат и перевод", "Chat & Translation"), icon: "chatTools"),
+            .disclosure(id: MindGramMenuItem.phrases.rawValue, section: section, title: strings.t("Быстрые фразы", "Quick Phrases"), icon: "phrases"),
             .disclosure(id: MindGramMenuItem.circles.rawValue, section: section, title: strings.t("Кружки", "Round Videos"), icon: "circles"),
             .disclosure(id: MindGramMenuItem.report.rawValue, section: section, title: strings.report, icon: "report"),
             .footer(id: MindGramMenuItem.footer.rawValue, section: section, text: strings.menuFooter)

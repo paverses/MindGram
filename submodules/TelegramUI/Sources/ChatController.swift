@@ -148,6 +148,8 @@ import ChatSearchNavigationContentNode
 import ChatAgeRestrictionAlertController
 import TextProcessingScreen
 import MindGramFileTools
+import MindGramUI
+import ObjectiveC
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -8479,6 +8481,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, interactive: Bool, force: Bool = false, saveInterfaceState: Bool = false, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
+        defer {
+            // MindGram: «Быстрые фразы» — the phrase list follows what is typed.
+            self.mindGramUpdatePhrases()
+        }
         updateChatPresentationInterfaceStateImpl(
             selfController: self,
             transition: transition,
@@ -11491,4 +11497,87 @@ private func mindGramLongText(_ messages: [EnqueueMessage]) -> (text: String, th
         return nil
     }
     return (text, threadId, replyToMessageId)
+}
+
+// MindGram: «Быстрые фразы» — the list above the message field and inserting a phrase.
+private var mindGramPhrasesOverlayKey: UInt8 = 0
+
+extension ChatControllerImpl {
+    func mindGramUpdatePhrases() {
+        let overlay = objc_getAssociatedObject(self, &mindGramPhrasesOverlayKey) as? MindGramPhrasesOverlay
+        let text = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
+        guard self.isNodeLoaded, let query = MindGramPhrases.query(in: text) else {
+            overlay?.removeFromSuperview()
+            objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            return
+        }
+        let matches = MindGramPhrases.matches(query.query)
+        guard !matches.isEmpty else {
+            overlay?.removeFromSuperview()
+            objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            return
+        }
+        let view: MindGramPhrasesOverlay
+        if let overlay {
+            view = overlay
+        } else {
+            view = MindGramPhrasesOverlay(isDark: self.presentationData.theme.overallDarkAppearance)
+            view.select = { [weak self] phrase in
+                self?.mindGramInsertPhrase(phrase)
+            }
+            self.view.addSubview(view)
+            objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, view, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+        view.update(phrases: matches, trigger: query.trigger)
+        var panelTop = self.view.bounds.height - 120.0
+        if let panel = self.chatDisplayNode.inputPanelNode {
+            panelTop = panel.view.convert(panel.bounds, to: self.view).minY
+        }
+        let height = view.preferredHeight
+        view.frame = CGRect(x: 8.0, y: panelTop - height - 6.0, width: self.view.bounds.width - 16.0, height: height)
+        self.view.bringSubviewToFront(view)
+    }
+
+    private func mindGramInsertPhrase(_ phrase: MindGramPhrases.Phrase) {
+        let current = NSMutableAttributedString(attributedString: self.presentationInterfaceState.interfaceState.effectiveInputState.inputText)
+        guard let query = MindGramPhrases.query(in: current.string) else {
+            return
+        }
+        var peerName = ""
+        if let peer = self.presentationInterfaceState.renderedPeer?.peer {
+            peerName = EnginePeer(peer).compactDisplayTitle
+        }
+        let expanded = MindGramPhrases.expand(phrase, peerName: peerName)
+        let insert = NSMutableAttributedString(string: expanded.text)
+        let length = insert.length
+        for format in expanded.formats {
+            let range = NSRange(location: format.location, length: min(format.length, length - format.location))
+            guard range.location >= 0, range.location < length, range.length > 0 else {
+                continue
+            }
+            switch format.kind {
+            case .bold:
+                insert.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+            case .italic:
+                insert.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+            case .underline:
+                insert.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
+            case .strikethrough:
+                insert.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
+            case .monospace:
+                insert.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+            case .spoiler:
+                insert.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
+            case .link:
+                if let url = format.url {
+                    insert.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
+                }
+            }
+        }
+        current.replaceCharacters(in: query.range, with: insert)
+        let caret = query.range.location + insert.length
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+            $0.updatedInterfaceState { $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: current, selectionRange: caret ..< caret)) }
+        })
+    }
 }
