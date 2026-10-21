@@ -61,7 +61,39 @@ func mindGramAppearanceController(context: AccountContext) -> ViewController {
         if index >= 0 && index < experimentToggles.count {
             MindGramSettings.set(experimentToggles[index], value)
         }
-    }, customItem: { _, presentationData, section in
+    }, open: { id in
+        let styles = MindGramBadge.Style.allCases
+        let index = Int(id) - 52
+        if index >= 0 && index < styles.count {
+            MindGramBadge.style = styles[index]
+        }
+    }, customItem: { key, presentationData, section in
+        if key == "badge" {
+            // The badge itself, under a notch drawn as on the phone.
+            return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 64.0, revision: MindGramBadge.Style.allCases.firstIndex(of: MindGramBadge.style) ?? 0, build: { size, _ in
+                let root = UIView(frame: CGRect(origin: CGPoint(), size: size))
+                root.backgroundColor = .black
+                let notch = UIView(frame: CGRect(x: (size.width - 160.0) / 2.0, y: -16.0, width: 160.0, height: 46.0))
+                notch.backgroundColor = UIColor(white: 0.12, alpha: 1.0)
+                notch.layer.cornerRadius = 18.0
+                root.addSubview(notch)
+                if let image = MindGramBadge.currentImage {
+                    let badge = UIImageView(image: image)
+                    badge.sizeToFit()
+                    badge.center = CGPoint(x: size.width / 2.0, y: 30.0 + badge.bounds.height / 2.0 + 2.0)
+                    root.addSubview(badge)
+                } else {
+                    let label = UILabel()
+                    label.text = "Telegram"
+                    label.font = UIFont.systemFont(ofSize: 13.0, weight: .semibold)
+                    label.textColor = .white
+                    label.sizeToFit()
+                    label.center = CGPoint(x: size.width / 2.0, y: 43.0)
+                    root.addSubview(label)
+                }
+                return root
+            })
+        }
         return MindGramPreviews.appearance(context: context, sectionId: section)
     })
 
@@ -78,6 +110,13 @@ func mindGramAppearanceController(context: AccountContext) -> ViewController {
             }
             entries.append(.footer(id: 20, section: 1, text: strings.t("Этот раздел видите только вы. Круглые кнопки работают вместе с «Liquid Glass в профиле».", "Only you see this section. Round buttons work together with Liquid Glass Profile.")))
         }
+
+        entries.append(.header(id: 50, section: 5, text: strings.t("БЕЙДЖ В ВЫРЕЗЕ", "NOTCH BADGE")))
+        entries.append(.custom(id: 51, section: 5, key: "badge", revision: MindGramBadge.Style.allCases.firstIndex(of: MindGramBadge.style) ?? 0))
+        for (index, style) in MindGramBadge.Style.allCases.enumerated() {
+            entries.append(.check(id: 52 + Int32(index), section: 5, title: style.title(isRussian: strings.isRussian), checked: MindGramBadge.style == style))
+        }
+        entries.append(.footer(id: 70, section: 5, text: strings.t("Надпись под челкой или Dynamic Island.", "The label under the notch or Dynamic Island.")))
         return entries
     })
     presentImpl = { [weak controller] c in

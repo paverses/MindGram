@@ -69,7 +69,16 @@ extension PeerInfoScreenNode {
                         
                         self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     })]
-                    
+
+                    // MindGram: «Визуальное описание» — what this phone shows instead of the real text.
+                    if let peer = data.peer {
+                        let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.baseLanguageCode.hasPrefix($0) })
+                        let title = isRussian ? "Изменить визуально" : "Change Visually"
+                        actions.append(ContextMenuAction(content: .text(title: title, accessibilityLabel: title), action: { [weak self] in
+                            self?.mindGramEditVisualAbout(peer: peer)
+                        }))
+                    }
+
                     let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
                     if canTranslate {
                         actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuTranslate, accessibilityLabel: presentationData.strings.Conversation_ContextMenuTranslate), action: { [weak self] in

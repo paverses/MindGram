@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import Display
 import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
@@ -172,7 +173,20 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
             return panel
         }
     }
-    
+
+    // MindGram: «Быстрые фразы» — Telegram's own inline results panel, filled with the matching phrases.
+    if let mindGramResults = mindGramPhrasesContextResults(chatPresentationInterfaceState) {
+        if let currentPanel = currentPanel as? VerticalListContextResultsChatInputContextPanelNode {
+            currentPanel.updateResults(mindGramResults)
+            return currentPanel
+        } else {
+            let panel = VerticalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
+            panel.interfaceInteraction = interfaceInteraction
+            panel.updateResults(mindGramResults)
+            return panel
+        }
+    }
+
     guard let inputQueryResult = chatPresentationInterfaceState.inputQueryResults.values.sorted(by: { lhs, rhs in
         let (lhsP, lhsHasItems) = inputQueryResultPriority(lhs)
         let (rhsP, rhsHasItems) = inputQueryResultPriority(rhs)
@@ -301,4 +315,35 @@ func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationI
     }
     
     return nil
+}
+
+/// MindGram: the bot id the phrases panel reports, so choosing a row inserts the phrase instead of sending a result.
+let mindGramPhrasesBotId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(7_700_000_001))
+
+/// MindGram: the phrases matching what is typed after a trigger, as inline bot results (title, text, letter icon).
+func mindGramPhrasesContextResults(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> ChatContextResultCollection? {
+    let text = chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.string
+    guard let query = MindGramPhrases.query(in: text) else {
+        return nil
+    }
+    let matches = MindGramPhrases.matches(query.query)
+    guard !matches.isEmpty else {
+        return nil
+    }
+    let results: [ChatContextResult] = matches.map { phrase in
+        let preview = phrase.text.replacingOccurrences(of: "\n", with: " ")
+        return .externalReference(ChatContextResult.ExternalReference(
+            queryId: 0,
+            id: phrase.id,
+            type: "article",
+            title: phrase.name,
+            description: phrase.folder.isEmpty ? preview : "\(phrase.folder) · \(preview)",
+            url: nil,
+            content: nil,
+            thumbnail: nil,
+            message: .text(text: phrase.text, entities: nil, richText: nil, disableUrlPreview: true, previewParameters: nil, replyMarkup: nil)
+        ))
+    }
+    let peerId = chatPresentationInterfaceState.renderedPeer?.peerId ?? mindGramPhrasesBotId
+    return ChatContextResultCollection(botId: mindGramPhrasesBotId, peerId: peerId, query: query.query, geoPoint: nil, queryId: 0, nextOffset: nil, presentation: .list, switchPeer: nil, webView: nil, results: results, cacheTimeout: 0)
 }

@@ -1288,10 +1288,14 @@ extension PeerInfoScreenNode {
                         }
                     }
                 }
-                
+
+                // MindGram: «MindGram» at the very end (chat export, visual username and description).
+                items.append(.separator)
+                items.append(strongSelf.mindGramProfileMenuItem(peer: chatPeer))
+
                 return .single(items)
             }
-            
+
             self.view.endEditing(true)
             
             if let sourceNode = self.headerNode.buttonNodes[.more]?.referenceNode {

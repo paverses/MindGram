@@ -57,19 +57,27 @@ enum MindGramChatExport {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MindGramExport", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent(name)
-        let content: String
-        switch format {
-        case .text:
-            content = self.text(context: context, peer: peer, messages: messages)
-        case .html:
-            content = self.html(context: context, peer: peer, messages: messages)
-        }
-        do {
-            try content.write(to: url, atomically: true, encoding: .utf8)
-            return url
-        } catch {
+        // Written piece by piece: one string holding every embedded photo and video took hundreds of megabytes
+        // and iOS closed the app.
+        try? FileManager.default.removeItem(at: url)
+        guard FileManager.default.createFile(atPath: url.path, contents: nil), let handle = try? FileHandle(forWritingTo: url) else {
             return nil
         }
+        defer {
+            try? handle.close()
+        }
+        let output: (String) -> Void = { piece in
+            if let data = piece.data(using: .utf8) {
+                try? handle.write(contentsOf: data)
+            }
+        }
+        switch format {
+        case .text:
+            output(self.text(context: context, peer: peer, messages: messages))
+        case .html:
+            self.html(context: context, peer: peer, messages: messages, output: output)
+        }
+        return url
     }
 
     // MARK: Pieces
@@ -293,15 +301,15 @@ enum MindGramChatExport {
                 let size = file.size ?? 0
                 let path = context.engine.resources.completedResourcePath(id: EngineMediaResource.Id(file.resource.id))
                 if file.isVoice {
-                    if let path, size < 8_000_000, budget > 0, let uri = self.dataURI(path: path, mime: "audio/ogg") {
-                        budget -= uri.count
+                    if let path, size < 4_000_000, budget > 0, let uri = self.dataURI(path: path, mime: "audio/ogg") {
+                        budget -= uri.utf8.count
                         return "<div class=\"media\">🎤 Голосовое<br><audio controls src=\"\(uri)\"></audio></div>"
                     }
                     return "<div class=\"media\">🎤 Голосовое (не скачано)</div>"
                 } else if file.isVideo || file.isInstantVideo || file.isAnimated {
                     let label = file.isInstantVideo ? "Кружок" : (file.isAnimated ? "GIF" : "Видео")
-                    if let path, size < 20_000_000, budget > 0, let uri = self.dataURI(path: path, mime: file.mimeType.isEmpty ? "video/mp4" : file.mimeType) {
-                        budget -= uri.count
+                    if let path, size < 8_000_000, budget > 0, let uri = self.dataURI(path: path, mime: file.mimeType.isEmpty ? "video/mp4" : file.mimeType) {
+                        budget -= uri.utf8.count
                         let round = file.isInstantVideo ? " round" : ""
                         let loop = file.isAnimated ? " autoplay loop muted" : " controls"
                         return "<video class=\"video\(round)\" src=\"\(uri)\"\(loop) playsinline></video>"
@@ -339,11 +347,12 @@ enum MindGramChatExport {
         return colors[Int(UInt64(bitPattern: id) % UInt64(colors.count))]
     }
 
-    private static func html(context: AccountContext, peer: EnginePeer, messages: [Message]) -> String {
+    private static func html(context: AccountContext, peer: EnginePeer, messages: [Message], output: (String) -> Void) {
         let accountPeerId = context.account.peerId
         let byId = Dictionary(messages.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var budget = 120_000_000
-        var body = ""
+        // Embedded media stops at about 60 MB of base64; later media are listed without the file.
+        var budget = 60_000_000
+        output(self.htmlHead(title: self.escape(peer.compactDisplayTitle), count: messages.count))
         let dayFormatter = DateFormatter()
         dayFormatter.dateFormat = "d MMMM yyyy"
         dayFormatter.locale = Locale(identifier: "ru_RU")
@@ -351,11 +360,12 @@ enum MindGramChatExport {
         timeFormatter.dateFormat = "HH:mm"
         var lastDay = ""
         for message in messages {
+            autoreleasepool {
             let date = Date(timeIntervalSince1970: TimeInterval(message.timestamp))
             let day = dayFormatter.string(from: date)
             if day != lastDay {
                 lastDay = day
-                body += "<div class=\"day\"><span>\(day)</span></div>\n"
+                output("<div class=\"day\"><span>\(day)</span></div>\n")
             }
             let author = self.authorName(message, peer: peer)
             let authorId = message.author?.id.toInt64() ?? peer.id.toInt64()
@@ -388,10 +398,13 @@ enum MindGramChatExport {
             }
             bubble += "<div class=\"meta\">\(self.isEdited(message) ? "изменено · " : "")\(timeFormatter.string(from: date))</div>"
             let searchText = self.escape((author + " " + message.text).lowercased())
-            body += "<div class=\"row \(outgoing ? "out" : "in")\" id=\"m\(message.id.id)\" data-search=\"\(searchText)\"><div class=\"avatar\" style=\"background:\(self.color(for: authorId))\">\(self.escape(initials))</div><div class=\"bubble\">\(bubble)</div></div>\n"
+            output("<div class=\"row \(outgoing ? "out" : "in")\" id=\"m\(message.id.id)\" data-search=\"\(searchText)\"><div class=\"avatar\" style=\"background:\(self.color(for: authorId))\">\(self.escape(initials))</div><div class=\"bubble\">\(bubble)</div></div>\n")
+            }
         }
+        output(self.htmlTail)
+    }
 
-        let title = self.escape(peer.compactDisplayTitle)
+    private static func htmlHead(title: String, count: Int) -> String {
         return """
         <!DOCTYPE html>
         <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -423,9 +436,13 @@ enum MindGramChatExport {
         .flash .bubble{animation:flash 1.4s}@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 1px 1px rgba(0,0,0,.08)}}
         .hidden{display:none}
         </style></head><body>
-        <header><h1>\(title) <small>· \(messages.count) сообщ.</small></h1><input id="q" placeholder="Поиск" oninput="search(this.value)"><button onclick="theme()">◐</button></header>
+        <header><h1>\(title) <small>· \(count) сообщ.</small></h1><input id="q" placeholder="Поиск" oninput="search(this.value)"><button onclick="theme()">◐</button></header>
         <main>
-        \(body)
+
+        """
+    }
+
+    private static let htmlTail = """
         </main>
         <script>
         function search(q){q=q.trim().toLowerCase();document.querySelectorAll('.row').forEach(function(r){r.classList.toggle('hidden',q.length>0&&r.dataset.search.indexOf(q)<0)});document.querySelectorAll('.day').forEach(function(d){d.classList.toggle('hidden',q.length>0)})}
@@ -435,7 +452,6 @@ enum MindGramChatExport {
         <!-- Exported with MindGram -->
         </body></html>
         """
-    }
 }
 
 /// The export flow: format → how many messages → building → «В Избранное» or «Поделиться».

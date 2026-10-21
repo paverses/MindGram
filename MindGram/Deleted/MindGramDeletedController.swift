@@ -84,36 +84,21 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
             break
         }
     }, open: { id in
-        let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
         switch id {
-        case 27:
-            pushImpl?(mindGramPickerController(context: context, title: strings.t("Размер значка", "Mark Size"), options: [70, 85, 100, 120, 140, 170, 200].map { ("\($0)", "\($0) %") }, selected: { "\(MindGramDeleted.markScalePercent)" }, select: { value in
-                if let value = Int(value) {
-                    MindGramDeleted.markScalePercent = value
-                }
-            }))
-        case 28:
-            pushImpl?(mindGramPickerController(context: context, title: strings.t("Прозрачность", "Opacity"), options: [100, 85, 70, 55, 40, 25].map { ("\($0)", "\($0) %") }, selected: { "\(MindGramDeleted.opacityPercent)" }, select: { value in
-                if let value = Int(value) {
-                    MindGramDeleted.opacityPercent = value
-                }
-            }))
+        case 24:
+            pushImpl?(mindGramDeletedLookController(context: context))
         case 30:
             pushImpl?(mindGramDeletedHistoryController(context: context))
         default:
             break
         }
-    }, customItem: { key, presentationData, section in
-        if key == "palette" {
-            return mindGramColorPaletteItem(presentationData: presentationData, sectionId: section, selected: MindGramDeleted.markColor, select: { value in
-                MindGramDeleted.markColor = value
-            })
-        }
+    }, customItem: { _, presentationData, section in
         return MindGramPreviews.deleted(context: context, sectionId: section)
     })
 
     let controller = mindGramListController(context: context, title: { $0.t("Удалённые и правки", "Deleted & Edited") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.header(id: -11, section: -1, text: strings.t("ПРЕВЬЮ", "PREVIEW")))
         entries.append(.custom(id: -10, section: -1, key: "preview", revision: mindGramDeletedPreviewRevision()))
         entries.append(.toggle(id: 0, section: 0, title: strings.t("Сохранять удалённые", "Keep Deleted Messages"), info: strings.t("Удалённое не исчезает у вас", "Deleted messages stay with you"), value: MindGramDeleted.isEnabled))
         if MindGramDeleted.isEnabled {
@@ -127,11 +112,7 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
             entries.append(.toggle(id: 21, section: 2, title: strings.t("Показывать в чате", "Show in Chat"), info: strings.t("Иначе только в истории", "Otherwise only in the history"), value: MindGramDeleted.showsInChat))
             if MindGramDeleted.showsInChat {
                 entries.append(.toggle(id: 23, section: 2, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord))
-                entries.append(.header(id: 24, section: 22, text: strings.t("ЦВЕТ КОРЗИНЫ", "TRASH COLOR")))
-                entries.append(.custom(id: 25, section: 22, key: "palette", revision: MindGramDeleted.markColor.hashValue))
-                entries.append(.footer(id: 26, section: 22, text: strings.t("Первый кружок — цвет времени.", "The first circle is the time's colour.")))
-                entries.append(.value(id: 27, section: 23, title: strings.t("Размер корзины", "Trash Size"), value: "\(MindGramDeleted.markScalePercent) %"))
-                entries.append(.value(id: 28, section: 23, title: strings.t("Прозрачность сообщений", "Message Opacity"), value: "\(MindGramDeleted.opacityPercent) %"))
+                entries.append(.value(id: 24, section: 2, title: strings.t("Вид удалённых сообщений", "Deleted Message Look"), value: strings.t("цвет, размер", "colour, size")))
             }
         }
         entries.append(.value(id: 30, section: 3, title: strings.t("История удалённых", "Deleted History"), value: "\(MindGramDeleted.records.count)"))

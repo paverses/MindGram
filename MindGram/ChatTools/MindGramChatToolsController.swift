@@ -43,7 +43,7 @@ enum MindGramChatToolsPage {
     var sections: Set<Int32> {
         switch self {
         case .messages:
-            return [2, 3, 5, 6, 9]
+            return [2, 3, 5, 6, 9, 10]
         case .translation:
             return [0, 1]
         case .media:
@@ -122,6 +122,15 @@ func mindGramChatToolsController(context: AccountContext, page: MindGramChatTool
             MindGramFileTools.isEnabled = value
         case 95:
             MindGramFileTools.showsCounter = value
+        case 100 ..< 100 + Int32(MindGramTextStyle.Format.allCases.count):
+            let format = MindGramTextStyle.Format.allCases[Int(id - 100)]
+            var formats = MindGramTextStyle.formats
+            if value {
+                formats.insert(format)
+            } else {
+                formats.remove(format)
+            }
+            MindGramTextStyle.formats = formats
         case 41:
             MindGramTranscription.alwaysLocal = value
         default:
@@ -130,6 +139,12 @@ func mindGramChatToolsController(context: AccountContext, page: MindGramChatTool
     }, open: { id in
         let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
         switch id {
+        case 110:
+            pushImpl?(mindGramPickerController(context: context, title: strings.t("Шрифт", "Font"), footer: strings.t("Буквы заменяются похожими символами Unicode перед отправкой. «Похожие буквы» меняют русские на латинские и греческие двойники; остальные шрифты работают с латиницей и цифрами. Сообщения со ссылками, @упоминаниями и /командами не меняются.", "Letters are swapped for Unicode look-alikes before sending. Look-alike letters turn Cyrillic into Latin and Greek twins; the other fonts work on Latin letters and digits. Messages with links, @mentions and /commands stay as they are."), options: MindGramTextStyle.Font.allCases.map { ($0.rawValue, $0.title(isRussian: strings.isRussian)) }, selected: { MindGramTextStyle.font.rawValue }, select: { value in
+                if let font = MindGramTextStyle.Font(rawValue: value) {
+                    MindGramTextStyle.font = font
+                }
+            }))
         case 1:
             pushImpl?(mindGramPickerController(context: context, title: strings.t("Переводчик", "Translator"), footer: strings.t("Google и Microsoft переводят бесплатно и без Premium. Apple переводит на устройстве (iOS 18), языки скачиваются в Настройках iOS. Telegram — перевод сервера Telegram.", "Google and Microsoft translate for free, without Premium. Apple translates on the device (iOS 18); languages download in iOS Settings. Telegram uses Telegram's server."), options: MindGramTranslator.Provider.allCases.map { ($0.rawValue, $0.title(isRussian: strings.isRussian)) }, selected: { MindGramTranslator.provider.rawValue }, select: { value in
                 if let provider = MindGramTranslator.Provider(rawValue: value) {
@@ -203,7 +218,7 @@ func mindGramChatToolsController(context: AccountContext, page: MindGramChatTool
         case .translation:
             return MindGramPreviews.chatTools(context: context, sectionId: section)
         case .messages:
-            return MindGramPreviews.appearance(context: context, sectionId: section)
+            return MindGramPreviews.messages(context: context, sectionId: section)
         case .media:
             return MindGramPreviews.media(context: context, sectionId: section)
         }
@@ -211,7 +226,8 @@ func mindGramChatToolsController(context: AccountContext, page: MindGramChatTool
 
     let controller = mindGramListController(context: context, title: { page.title($0) }, arguments: arguments, extraUpdates: translationSettings, entries: { _, strings in
         var entries: [MindGramListEntry] = []
-        entries.append(.custom(id: -10, section: -1, key: "preview", revision: 0))
+        entries.append(.header(id: -11, section: -1, text: strings.t("ПРЕВЬЮ", "PREVIEW")))
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: MindGramTextStyle.font.rawValue.hashValue))
 
         entries.append(.header(id: 0, section: 0, text: strings.t("ПЕРЕВОД", "TRANSLATION")))
         entries.append(.value(id: 1, section: 0, title: strings.t("Переводчик", "Translator"), value: MindGramTranslator.provider.title(isRussian: strings.isRussian)))
@@ -280,7 +296,13 @@ func mindGramChatToolsController(context: AccountContext, page: MindGramChatTool
         entries.append(.header(id: 94, section: 9, text: strings.t("СЧЁТЧИК СИМВОЛОВ", "CHARACTER COUNTER")))
         entries.append(.toggle(id: 95, section: 9, title: strings.t("Счётчик символов", "Character Counter"), info: strings.t("Над полем ввода, пока пишете", "Above the message field while you type"), value: MindGramFileTools.showsCounter))
         entries.append(.footer(id: 96, section: 9, text: strings.t("Показывает, сколько символов в сообщении и сколько осталось до лимита Telegram (4096). Работает и при редактировании.", "Shows how many characters the message has and how many are left before Telegram's limit (4096). Works while editing too.")))
-        return entries.filter { $0.stableId == -10 || page.sections.contains($0.section) }
+        entries.append(.header(id: 99, section: 10, text: strings.t("ОФОРМЛЕНИЕ ТЕКСТА", "TEXT STYLE")))
+        for (index, format) in MindGramTextStyle.Format.allCases.enumerated() {
+            entries.append(.toggle(id: 100 + Int32(index), section: 10, title: format.title(isRussian: strings.isRussian), info: strings.t("Каждое отправленное сообщение", "Every message you send"), value: MindGramTextStyle.formats.contains(format)))
+        }
+        entries.append(.value(id: 110, section: 10, title: strings.t("Шрифт", "Font"), value: MindGramTextStyle.font.title(isRussian: strings.isRussian)))
+        entries.append(.footer(id: 111, section: 10, text: strings.t("Оформление и шрифт добавляются к тексту при отправке. Например, «Похожие буквы»: «Καк οтπραвлять οфф3ρ?».", "Formatting and the font are applied when you send. For example, look-alike letters: «Καк οтπραвлять οфф3ρ?».")))
+        return entries.filter { $0.stableId == -10 || $0.stableId == -11 || page.sections.contains($0.section) }
     })
     presentUIKitImpl = { [weak controller] c in
         controller?.present(c, animated: true)

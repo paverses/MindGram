@@ -5405,7 +5405,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
         }
         // MindGram: "Квадратная аватарка" — the profile (and Settings) opens with the photo already expanded.
-        if self.mindGramSquareAvatarEligible(isLandscape: layout.size.width > layout.size.height) && !self.headerNode.isAvatarExpanded && self.scrollNode.view.contentOffset.y < 1.0 {
+        let mindGramSquare = self.mindGramSquareAvatarEligible(isLandscape: layout.size.width > layout.size.height)
+        self.headerNode.mindGramKeepsSquare = mindGramSquare
+        if mindGramSquare && !self.headerNode.isAvatarExpanded {
             self.headerNode.updateIsAvatarExpanded(true, transition: .immediate)
         }
         
@@ -6129,11 +6131,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 isLandscape = true
             }
             // MindGram: "Квадратная аватарка" — expanded at the top, no pull-down, no gallery by dragging.
-            if self.mindGramSquareAvatarEligible(isLandscape: isLandscape) {
+            let mindGramSquare = self.mindGramSquareAvatarEligible(isLandscape: isLandscape)
+            self.headerNode.mindGramKeepsSquare = mindGramSquare
+            if mindGramSquare {
                 if offsetY < 0.0 {
                     scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: 0.0)
                 }
-                shouldBeExpanded = offsetY < 1.0
+                // The square photo stays square and scrolls away with the list; the name docks in the bar.
+                shouldBeExpanded = true
                 self.canOpenAvatarByDragging = false
             } else if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
                 if let peer = self.data?.peer, self.chatLocation.threadId == nil, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && !isLandscape {

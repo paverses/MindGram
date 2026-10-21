@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import MindGramUI
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramCore
@@ -970,7 +971,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             }
         }
         
-        self.backgroundColor = backgroundColor
+        // MindGram: with the avatar backdrop or a profile wallpaper the area under the tabs shows it, not a solid fill.
+        if MindGramSettings.isOn(.avatarBackdrop) || MindGramProfileWallpaper.isEnabled {
+            self.backgroundColor = .clear
+        } else {
+            self.backgroundColor = backgroundColor
+        }
 
         let isScrollingLockedAtTop = expansionFraction < 1.0 - CGFloat.ulpOfOne
 
@@ -1378,7 +1384,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         self.tabsBackgroundContainer.update(size: tabContainerFrame.size, isDark: presentationData.theme.overallDarkAppearance, transition: ComponentTransition(transition))
         
         transition.updateFrame(view: self.tabsBackgroundView, frame: CGRect(origin: CGPoint(), size: tabContainerFrame.size))
-        self.tabsBackgroundView.update(size: tabContainerFrame.size, cornerRadius: tabContainerFrame.height * 0.5, isDark: presentationData.theme.overallDarkAppearance, tintColor: .init(kind: .panel), transition: ComponentTransition(transition))
+        self.tabsBackgroundView.update(size: tabContainerFrame.size, cornerRadius: tabContainerFrame.height * 0.5, isDark: presentationData.theme.overallDarkAppearance, tintColor: .init(kind: MindGramSettings.isOn(.glassProfile) ? .clear : .panel), transition: ComponentTransition(transition))
         
         ComponentTransition(transition).setAlpha(view: self.tabsBackgroundContainer, alpha: tabsAlpha)
         

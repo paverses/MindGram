@@ -172,6 +172,34 @@ public enum MindGramTranslator {
         if target.isEmpty {
             target = "en"
         }
+
+        // Texts translated before come from memory at once; only the rest go to the network.
+        let cached = texts.map { MindGramTranslationCache.get(text: $0, toLang: target) }
+        if cached.allSatisfy({ $0 != nil }) {
+            completion(.success((cached.map { $0 ?? "" }, nil)))
+            return
+        }
+        let missingIndices = texts.indices.filter { cached[$0] == nil }
+        let missingTexts = missingIndices.map { texts[$0] }
+        let merge: (Result<(texts: [String], detected: String?), TranslationError>) -> Void = { result in
+            switch result {
+            case let .success(value):
+                var merged = cached.map { $0 ?? "" }
+                for (position, index) in missingIndices.enumerated() where position < value.texts.count {
+                    merged[index] = value.texts[position]
+                    if value.texts[position] != texts[index] {
+                        MindGramTranslationCache.set(text: texts[index], toLang: target, translation: value.texts[position])
+                    }
+                }
+                completion(.success((merged, value.detected)))
+            case let .failure(error):
+                completion(.failure(error))
+            }
+        }
+        self.translateUncached(texts: missingTexts, source: source, target: target, provider: provider, completion: merge)
+    }
+
+    private static func translateUncached(texts: [String], source: String?, target: String, provider: Provider, completion: @escaping (Result<(texts: [String], detected: String?), TranslationError>) -> Void) {
         switch provider {
         case .microsoft:
             MindGramMicrosoftTranslator.translate(texts: texts, fromLang: source, toLang: target, completion: completion)
@@ -361,5 +389,32 @@ enum MindGramMicrosoftTranslator {
                 }).resume()
             }
         })
+    }
+}
+
+/// Translations already received in this launch, so scrolling back or reopening a chat shows them at once.
+enum MindGramTranslationCache {
+    private static let lock = NSLock()
+    private static var storage: [String: String] = [:]
+
+    private static func key(_ text: String, _ toLang: String) -> String {
+        return toLang + "\u{1}" + text
+    }
+
+    static func get(text: String, toLang: String) -> String? {
+        self.lock.lock()
+        defer {
+            self.lock.unlock()
+        }
+        return self.storage[self.key(text, toLang)]
+    }
+
+    static func set(text: String, toLang: String, translation: String) {
+        self.lock.lock()
+        if self.storage.count > 5000 {
+            self.storage.removeAll()
+        }
+        self.storage[self.key(text, toLang)] = translation
+        self.lock.unlock()
     }
 }

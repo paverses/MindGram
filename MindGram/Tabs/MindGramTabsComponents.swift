@@ -106,9 +106,11 @@ final class MindGramPercentSliderComponent: Component {
     let theme: PresentationTheme
     let title: String
     let percent: Int
+    let range: ClosedRange<Int>
     let updated: (Int) -> Void
 
-    init(theme: PresentationTheme, title: String, percent: Int, updated: @escaping (Int) -> Void) {
+    init(theme: PresentationTheme, title: String, percent: Int, range: ClosedRange<Int> = MindGramSettingsRange.navbar, updated: @escaping (Int) -> Void) {
+        self.range = range
         self.theme = theme
         self.title = title
         self.percent = percent
@@ -116,7 +118,7 @@ final class MindGramPercentSliderComponent: Component {
     }
 
     static func ==(lhs: MindGramPercentSliderComponent, rhs: MindGramPercentSliderComponent) -> Bool {
-        return lhs.theme === rhs.theme && lhs.title == rhs.title && lhs.percent == rhs.percent
+        return lhs.theme === rhs.theme && lhs.title == rhs.title && lhs.percent == rhs.percent && lhs.range == rhs.range
     }
 
     final class View: UIView {
@@ -148,7 +150,7 @@ final class MindGramPercentSliderComponent: Component {
             self.titleLabel.frame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: titleSize)
             self.valueLabel.frame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - valueSize.width, y: 12.0), size: valueSize)
 
-            let range = MindGramSettingsRange.navbar
+            let range = component.range
             let normalized = CGFloat(component.percent - range.lowerBound) / CGFloat(range.upperBound - range.lowerBound)
             let updated = component.updated
             let sliderSize = self.slider.update(

@@ -101,6 +101,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private let chatLocation: ChatLocation
     
     private(set) var isAvatarExpanded: Bool
+    /// MindGram: "Квадратная аватарка" — the large photo scrolls away with the list instead of collapsing.
+    var mindGramKeepsSquare = false
     var skipCollapseCompletion = false
     var ignoreCollapse = false
     
@@ -1944,10 +1946,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var apparentAvatarListFrame: CGRect
         let controlsClippingFrame: CGRect
         if self.isAvatarExpanded {
-            let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.width / 2.0 - contentOffset / 2.0)
+            let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.width / 2.0 - (self.mindGramKeepsSquare ? contentOffset : contentOffset / 2.0))
             apparentAvatarFrame = CGRect(origin: CGPoint(x: expandedAvatarCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
             
-            let expandedAvatarListCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - contentOffset / 2.0)
+            let expandedAvatarListCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - (self.mindGramKeepsSquare ? contentOffset : contentOffset / 2.0))
             apparentAvatarListFrame = CGRect(origin: CGPoint(x: expandedAvatarListCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarListCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
             
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {

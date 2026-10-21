@@ -1348,32 +1348,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        // MindGram: «История правок» (MindGram/Messages).
-        let mindGramVersions = MindGramEdits.versions(MindGramMessageKey(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, id: message.id.id))
-        if !mindGramVersions.isEmpty {
-            let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
-            actions.append(.action(ContextMenuActionItem(text: isRussian ? "История правок (\(mindGramVersions.count))" : "Edit History (\(mindGramVersions.count))", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                f(.default)
-                controllerInteraction.navigationController()?.pushViewController(mindGramEditHistoryController(context: context, versions: mindGramVersions, currentText: message.text), animated: true)
-            })))
-        }
-        // MindGram: «Экспорт чата» в .txt / .html (MindGram/Export).
-        if !chatPresentationInterfaceState.copyProtectionEnabled, let exportPeer = message.peers[message.id.peerId].flatMap(EnginePeer.init) {
-            let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
-            actions.append(.action(ContextMenuActionItem(text: isRussian ? "Экспорт чата" : "Export Chat", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                f(.default)
-                mindGramStartChatExport(context: context, peer: exportPeer, present: { controller in
-                    controllerInteraction.navigationController()?.present(controller, animated: true)
-                }, presentInCurrent: { controller in
-                    controllerInteraction.presentControllerInCurrent(controller, nil)
-                })
-            })))
-        }
-
         let isCopyProtected = chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()
         if !messageText.isEmpty || richMessageMarkdown != nil || (resourceAvailable && isImage) || diceEmoji != nil {
             if !isExpired {
@@ -1980,17 +1954,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     interfaceInteraction.forwardMessages(selectAll || isImage ? messages : [message])
                     f(.dismissWithoutContent)
                 })))
-                if MindGramForward.showsMenuItem {
-                    let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
-                    actions.append(.action(ContextMenuActionItem(text: isRussian ? "Переслать без автора" : "Forward Without Author", icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        // MindGram: the forward flow reads this once and hides the sender.
-                        mindGramForwardWithoutAuthorOnce = true
-                        interfaceInteraction.forwardMessages(selectAll || isImage ? messages : [message])
-                        f(.dismissWithoutContent)
-                    })))
-                }
             }
         }
         
@@ -2517,6 +2480,98 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        // MindGram: «MindGram» at the very end — MindGram's own actions for this message in a submenu.
+        do {
+            let isRussian = ["ru", "uk", "be"].contains(where: { chatPresentationInterfaceState.strings.baseLanguageCode.hasPrefix($0) })
+            let backTitle = chatPresentationInterfaceState.strings.Common_Back
+            let messageKey = MindGramMessageKey(peerId: message.id.peerId.toInt64(), namespace: message.id.namespace, id: message.id.id)
+            let versions = MindGramEdits.versions(messageKey)
+            let canForward = data.messageActions.options.contains(.forward) && !isCopyProtected
+            let forwardTargets = selectAll || isImage ? messages : [message]
+            let exportPeer = chatPresentationInterfaceState.copyProtectionEnabled ? nil : message.peers[message.id.peerId].flatMap(EnginePeer.init)
+            let messageId = message.id
+            let currentText = MindGramLocalEdits.text(messageKey) ?? message.text
+            let hasLocalText = MindGramLocalEdits.text(messageKey) != nil
+
+            actions.append(.separator)
+            actions.append(.action(ContextMenuActionItem(text: "MindGram", icon: { theme in
+                return MindGramLogo.image(size: CGSize(width: 24.0, height: 24.0), color: theme.actionSheet.primaryTextColor, inset: 3.5)
+            }, action: { c, _ in
+                var subItems: [ContextMenuItem] = []
+                subItems.append(.action(ContextMenuActionItem(text: backTitle, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                }, iconPosition: .left, action: { c, _ in
+                    c?.popItems()
+                })))
+                subItems.append(.separator)
+
+                if !message.text.isEmpty {
+                    subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Изменить локально" : "Edit Locally", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.default)
+                        let alert = UIAlertController(title: isRussian ? "Изменить локально" : "Edit Locally", message: isRussian ? "Текст поменяется только у вас, без пометки «изменено»." : "Only you see the new text, with no \"edited\" mark.", preferredStyle: .alert)
+                        alert.addTextField { field in
+                            field.text = currentText
+                            field.clearButtonMode = .whileEditing
+                        }
+                        alert.addAction(UIAlertAction(title: isRussian ? "Отмена" : "Cancel", style: .cancel))
+                        alert.addAction(UIAlertAction(title: isRussian ? "Сохранить" : "Save", style: .default, handler: { [weak alert] _ in
+                            MindGramLocalEdits.set(messageKey, text: alert?.textFields?.first?.text)
+                            controllerInteraction.requestMessageUpdate(messageId, false, nil)
+                        }))
+                        controllerInteraction.navigationController()?.present(alert, animated: true)
+                    })))
+                    if hasLocalText {
+                        subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Вернуть оригинал" : "Restore Original", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.default)
+                            MindGramLocalEdits.set(messageKey, text: nil)
+                            controllerInteraction.requestMessageUpdate(messageId, false, nil)
+                        })))
+                    }
+                }
+                if canForward {
+                    subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Переслать без автора" : "Forward Without Author", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        // The forward flow reads this once and hides the sender.
+                        mindGramForwardWithoutAuthorOnce = true
+                        interfaceInteraction.forwardMessages(forwardTargets)
+                        f(.dismissWithoutContent)
+                    })))
+                }
+                if !versions.isEmpty {
+                    subItems.append(.action(ContextMenuActionItem(text: isRussian ? "История правок (\(versions.count))" : "Edit History (\(versions.count))", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.default)
+                        controllerInteraction.navigationController()?.pushViewController(mindGramEditHistoryController(context: context, versions: versions, currentText: message.text), animated: true)
+                    })))
+                }
+                if let exportPeer {
+                    subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Экспорт чата" : "Export Chat", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.default)
+                        mindGramStartChatExport(context: context, peer: exportPeer, present: { controller in
+                            controllerInteraction.navigationController()?.present(controller, animated: true)
+                        }, presentInCurrent: { controller in
+                            controllerInteraction.presentControllerInCurrent(controller, nil)
+                        })
+                    })))
+                }
+                subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Скопировать ID сообщения" : "Copy Message ID", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    UIPasteboard.general.string = "\(messageId.id)"
+                    f(.default)
+                })))
+                c?.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+            })))
+        }
+
         // MindGram: Выбрать · Скопировать · Удалить on top ("Новое меню сообщения").
         let mindGramActions = mindGramApplyQuickActions(actions, selectTitle: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelect, copyTitle: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, deleteTitles: [chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, chatPresentationInterfaceState.strings.Chat_MessageContextMenu_Remove])
         return ContextController.Items(content: .list(mindGramActions), tip: nil)

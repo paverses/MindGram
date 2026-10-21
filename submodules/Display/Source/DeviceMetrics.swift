@@ -555,8 +555,14 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         if case .iPhoneX = self {
             return false
         }
-        // MindGram: also under the Dynamic Island, as Swiftgram does (Telegram shows it on notches only).
-        return self.hasTopNotch || self.hasDynamicIsland
+        // MindGram: also under the Dynamic Island, as Swiftgram does (Telegram shows it on notches only), and on the
+        // iPhone 13/14/16e notch, which Telegram's hasTopNotch leaves out.
+        switch self {
+        case .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
+            return true
+        default:
+            return self.hasTopNotch || self.hasDynamicIsland
+        }
     }
 
     /// MindGram: how far from the top the app badge sits; under the island on Dynamic Island iPhones

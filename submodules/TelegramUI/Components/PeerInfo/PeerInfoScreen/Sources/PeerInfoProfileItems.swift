@@ -219,7 +219,7 @@ func infoItems(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Profile_Username,
-                    text: "@\(mainUsername)",
+                    text: "@\(MindGramVisualProfile.username(peerId: user.id.toInt64()) ?? mainUsername)",
                     additionalText: additionalUsernames,
                     textColor: .accent,
                     icon: .qrCode,
@@ -264,7 +264,9 @@ func infoItems(
             }
             
             var hasAbout = false
-            if let about = cachedData.about, !about.isEmpty {
+            // MindGram: «Визуальное описание» shows instead of the real bio on this phone.
+            let mindGramAbout = MindGramVisualProfile.about(peerId: user.id.toInt64()) ?? cachedData.about
+            if let about = mindGramAbout, !about.isEmpty {
                 hasAbout = true
             }
             var hasNote = false
@@ -322,10 +324,10 @@ func infoItems(
                 
                 if hasAbout || hasWebApp {
                     var label: String = ""
-                    if let about = cachedData.about, !about.isEmpty {
+                    if let about = mindGramAbout, !about.isEmpty {
                         label = user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo
                     }
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: label, text: cachedData.about ?? "", textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
+                    items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: label, text: mindGramAbout ?? "", textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                         bioContextAction(node, nil, nil)
                     } : nil, linkItemAction: bioLinkAction, button: actionButton, contextAction: bioContextAction, requestLayout: { animated in
                         interaction.requestLayout(animated)
@@ -654,7 +656,7 @@ func infoItems(
                     PeerInfoScreenLabeledValueItem(
                         id: ItemUsername,
                         label: presentationData.strings.Channel_LinkItem,
-                        text: "https://t.me/\(mainUsername)",
+                        text: "https://t.me/\(MindGramVisualProfile.username(peerId: channel.id.toInt64()) ?? mainUsername)",
                         additionalText: additionalUsernames,
                         textColor: .accent,
                         icon: .qrCode,
@@ -694,12 +696,12 @@ func infoItems(
                     } else {
                         aboutText = presentationData.strings.GroupInfo_ScamGroupWarning
                     }
-                } else if let about = cachedData.about, !about.isEmpty {
+                } else if let about = MindGramVisualProfile.about(peerId: channel.id.toInt64()) ?? cachedData.about, !about.isEmpty {
                     aboutText = about
                 } else {
                     aboutText = nil
                 }
-                
+
                 if let aboutText = aboutText {
                     var enabledEntities = enabledPublicBioEntities
                     if case .group = channel.info {
@@ -848,12 +850,12 @@ func infoItems(
                 aboutText = presentationData.strings.GroupInfo_FakeGroupWarning
             } else if group.isScam {
                 aboutText = presentationData.strings.GroupInfo_ScamGroupWarning
-            } else if let about = cachedData.about, !about.isEmpty {
+            } else if let about = MindGramVisualProfile.about(peerId: group.id.toInt64()) ?? cachedData.about, !about.isEmpty {
                 aboutText = about
             } else {
                 aboutText = nil
             }
-            
+
             if let aboutText = aboutText {
                 items[currentPeerInfoSection]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
                     bioContextAction(node, nil, nil)

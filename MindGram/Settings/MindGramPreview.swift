@@ -74,6 +74,16 @@ enum MindGramPreviews {
         return self.chat(context: context, sectionId: sectionId, messages: nil)
     }
 
+    /// Сообщения: your message in the chosen «шрифт».
+    static func messages(context: AccountContext, sectionId: ItemListSectionId) -> ListViewItem {
+        let ru = self.isRussian(context)
+        let sample = ru ? "Как отправлять оффер?" : "How do I send an offer?"
+        return self.chat(context: context, sectionId: sectionId, messages: [
+            (false, nil, ru ? "Напиши, как будешь готов 👋" : "Text me when you're ready 👋"),
+            (true, nil, MindGramTextStyle.apply(font: MindGramTextStyle.font, to: sample))
+        ])
+    }
+
     /// Удалённые: the incoming message is shown as kept-deleted — the trash mark in its colour and size, and the
     /// message's opacity — exactly as in a chat.
     static func deleted(context: AccountContext, sectionId: ItemListSectionId) -> ListViewItem {

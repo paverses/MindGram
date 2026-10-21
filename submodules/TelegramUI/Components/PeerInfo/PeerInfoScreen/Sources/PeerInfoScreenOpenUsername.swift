@@ -47,7 +47,23 @@ extension PeerInfoScreenNode {
                 copyAction()
             }
         })))
-        
+
+        // MindGram: «Визуальный юзернейм» — what this phone shows instead of the real @username.
+        let isRussian = ["ru", "uk", "be"].contains(where: { self.presentationData.strings.baseLanguageCode.hasPrefix($0) })
+        let hasVisual = MindGramVisualProfile.username(peerId: peer.id.toInt64()) != nil
+        items.append(.action(ContextMenuActionItem(text: isRussian ? "Визуальный юзернейм" : "Visual Username", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Mention"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            c?.dismiss {
+                self?.mindGramEditVisualUsername(peer: peer)
+            }
+        })))
+        if hasVisual {
+            items.append(.action(ContextMenuActionItem(text: isRussian ? "Показать настоящий" : "Show the Real One", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                c?.dismiss {
+                    MindGramVisualProfile.setUsername(peerId: peer.id.toInt64(), nil)
+                }
+            })))
+        }
+
         let actions = ContextController.Items(content: .list(items))
         
         let contextController = makeContextController(presentationData: self.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(actions), gesture: gesture)

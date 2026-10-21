@@ -77,6 +77,7 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
 
     let controller = mindGramListController(context: context, title: { $0.ghostMode }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.header(id: -11, section: -1, text: strings.t("ПРЕВЬЮ", "PREVIEW")))
         entries.append(.custom(id: -10, section: -1, key: "preview", revision: 0))
         entries.append(.toggle(id: GhostRow.master.rawValue, section: 0, title: strings.ghostMode, info: strings.ghostModeInfo, value: MindGramGhost.isEnabled))
         if MindGramGhost.isEnabled {

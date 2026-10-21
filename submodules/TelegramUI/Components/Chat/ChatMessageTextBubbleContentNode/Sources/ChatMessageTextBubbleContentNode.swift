@@ -439,8 +439,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                 }
-                
-                
+
+                // MindGram: «Изменить локально» — the text set on this device, without an "edited" mark.
+                if let localText = MindGramLocalEdits.text(MindGramMessageKey(peerId: item.message.id.peerId.toInt64(), namespace: item.message.id.namespace, id: item.message.id.id)) {
+                    rawText = localText
+                    messageEntities = []
+                }
+
                 if incoming && item.associatedData.isSuspiciousPeer, let entities = messageEntities {
                     messageEntities = entities.filter { entity in
                         switch entity.type {

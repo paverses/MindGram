@@ -641,7 +641,8 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
     private let extendedMediaProcessingManager = ChatMessageVisibleThrottledProcessingManager(interval: 5.0)
-    private let translationProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
+    // MindGram: the external translator answers fast, so visible messages are sent almost at once (Telegram waits 1 s + 1 s).
+    private let translationProcessingManager = MindGramTranslator.usesExternalProvider ? ChatMessageThrottledProcessingManager(delay: 0.05, submitInterval: 0.15) : ChatMessageThrottledProcessingManager(submitInterval: 1.0)
     private let refreshStoriesProcessingManager = ChatMessageThrottledProcessingManager()
     private let factCheckProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
     private let inlineGroupCallsProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)

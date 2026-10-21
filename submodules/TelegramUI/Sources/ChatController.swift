@@ -9156,6 +9156,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             ]), in: .window(.root))
             return
         }
+        // MindGram: «Оформление текста» — the chosen font and formatting on every text sent.
+        let messages = mindGramStyledMessages(messages)
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
             return
@@ -11477,6 +11479,69 @@ private func mindGramConfirmKind(_ messages: [EnqueueMessage]) -> MindGramSendCo
     return nil
 }
 
+/// MindGram: «Оформление текста» — texts get the chosen font and whole-message formatting. Bot commands are left
+/// alone, and so is the font of a text with custom emoji (their positions would no longer match).
+private func mindGramStyledMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+    guard MindGramTextStyle.isActive else {
+        return messages
+    }
+    let font = MindGramTextStyle.font
+    let formats = MindGramTextStyle.formats
+    return messages.map { message -> EnqueueMessage in
+        guard case let .message(text, attributes, inlineStickers, mediaReference, threadId, replyToMessageId, replyToStoryId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets) = message, !text.isEmpty, !text.hasPrefix("/") else {
+            return message
+        }
+        var entities: [MessageTextEntity] = []
+        var otherAttributes: [MessageAttribute] = []
+        for attribute in attributes {
+            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                entities = attribute.entities
+            } else {
+                otherAttributes.append(attribute)
+            }
+        }
+        let hasCustomEmoji = entities.contains(where: { entity in
+            if case .CustomEmoji = entity.type {
+                return true
+            }
+            return false
+        })
+        var styledText = text
+        if !hasCustomEmoji {
+            styledText = MindGramTextStyle.apply(font: font, to: text)
+            if styledText != text {
+                // Decorative letters take two UTF-16 units each, so the old ranges no longer fit.
+                entities = []
+            }
+        }
+        let length = (styledText as NSString).length
+        for format in formats {
+            let type: MessageTextEntityType
+            switch format {
+            case .bold:
+                type = .Bold
+            case .italic:
+                type = .Italic
+            case .underline:
+                type = .Underline
+            case .strikethrough:
+                type = .Strikethrough
+            case .monospace:
+                type = .Code
+            case .spoiler:
+                type = .Spoiler
+            case .quote:
+                type = .BlockQuote(isCollapsed: false)
+            }
+            entities.append(MessageTextEntity(range: 0 ..< length, type: type))
+        }
+        if !entities.isEmpty {
+            otherAttributes.append(TextEntitiesMessageAttribute(entities: entities))
+        }
+        return .message(text: styledText, attributes: otherAttributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
+    }
+}
+
 /// MindGram: the whole text of a send that Telegram split for being too long (plain text only).
 private func mindGramLongText(_ messages: [EnqueueMessage]) -> (text: String, threadId: Int64?, replyToMessageId: EngineMessageReplySubject?)? {
     var parts: [String] = []
@@ -11500,7 +11565,6 @@ private func mindGramLongText(_ messages: [EnqueueMessage]) -> (text: String, th
 }
 
 // MindGram: «Быстрые фразы» — the list above the message field and inserting a phrase.
-private var mindGramPhrasesOverlayKey: UInt8 = 0
 
 private var mindGramCounterKey: UInt8 = 0
 
@@ -11546,53 +11610,13 @@ extension ChatControllerImpl {
         return 26.0
     }
 
+    /// Called after every chat interface update. The quick phrases list itself is Telegram's inline results panel
+    /// (ChatInterfaceInputContextPanels.swift); here only the character counter is kept in place.
     func mindGramUpdatePhrases() {
-        let counterHeight = self.mindGramUpdateCounter()
-        let overlay = objc_getAssociatedObject(self, &mindGramPhrasesOverlayKey) as? MindGramPhrasesOverlay
-        let text = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
-        guard self.isNodeLoaded, let query = MindGramPhrases.query(in: text) else {
-            overlay?.removeFromSuperview()
-            objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            return
-        }
-        let matches = MindGramPhrases.matches(query.query)
-        guard !matches.isEmpty else {
-            overlay?.removeFromSuperview()
-            objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-            return
-        }
-        let view: MindGramPhrasesOverlay
-        if let overlay {
-            view = overlay
-        } else {
-            let isRussian = ["ru", "uk", "be"].contains(where: { self.presentationData.strings.baseLanguageCode.hasPrefix($0) })
-            view = MindGramPhrasesOverlay(theme: self.presentationData.theme, buttonTitle: isRussian ? "Настроить фразы" : "Edit Phrases")
-            view.select = { [weak self] phrase in
-                self?.mindGramInsertPhrase(phrase)
-            }
-            view.openSettings = { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.view.endEditing(true)
-                self.push(mindGramPhrasesController(context: self.context))
-            }
-            self.view.addSubview(view)
-            objc_setAssociatedObject(self, &mindGramPhrasesOverlayKey, view, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-        view.update(phrases: matches, trigger: query.trigger, theme: self.presentationData.theme)
-        // Like inline bot results: right above the message field, as wide as it.
-        var panelFrame = CGRect(x: 8.0, y: self.view.bounds.height - 120.0, width: self.view.bounds.width - 16.0, height: 0.0)
-        if let panel = self.chatDisplayNode.inputPanelNode {
-            panelFrame = panel.view.convert(panel.bounds, to: self.view)
-        }
-        let sideInset = max(8.0, panelFrame.minX + 8.0)
-        let height = min(view.preferredHeight, max(120.0, panelFrame.minY - self.view.safeAreaInsets.top - 60.0))
-        view.frame = CGRect(x: sideInset, y: panelFrame.minY - counterHeight - height - 6.0, width: self.view.bounds.width - sideInset * 2.0, height: height)
-        self.view.bringSubviewToFront(view)
+        let _ = self.mindGramUpdateCounter()
     }
 
-    private func mindGramInsertPhrase(_ phrase: MindGramPhrases.Phrase) {
+    func mindGramInsertPhrase(_ phrase: MindGramPhrases.Phrase) {
         let current = NSMutableAttributedString(attributedString: self.presentationInterfaceState.interfaceState.effectiveInputState.inputText)
         guard let query = MindGramPhrases.query(in: current.string) else {
             return

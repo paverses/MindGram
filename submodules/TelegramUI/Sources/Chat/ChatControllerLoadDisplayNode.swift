@@ -2521,6 +2521,13 @@ extension ChatControllerImpl {
             guard let strongSelf = self else {
                 return false
             }
+            // MindGram: a row of the quick phrases list puts the phrase into the message field.
+            if results.botId == mindGramPhrasesBotId {
+                if case let .externalReference(reference) = result, let phrase = MindGramPhrases.phrases.first(where: { $0.id == reference.id }) {
+                    strongSelf.mindGramInsertPhrase(phrase)
+                }
+                return true
+            }
             if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(node.view, rect)
                 return false

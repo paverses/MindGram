@@ -20,7 +20,7 @@ public struct MindGramAttachMenuItem {
 /// The "+" menu (Оформление → Эксперименты): a Liquid Glass panel above the "+" button with one row per
 /// attachment kind — Галерея, Файл, Геопозиция… — in a plain vertical list. A tap closes it and calls
 /// `select` with the row's index (the caller opens Telegram's own screen for it).
-public final class MindGramAttachMenuView: UIView {
+public final class MindGramAttachMenuView: UIView, UIScrollViewDelegate {
     private let items: [MindGramAttachMenuItem]
     private let select: (Int) -> Void
     private let isDark: Bool
@@ -36,6 +36,10 @@ public final class MindGramAttachMenuView: UIView {
     private let panelWidth: CGFloat = 250.0
     private var anchor: CGRect = .zero
     private var isDismissing = false
+    /// Opens with three and a half rows; scrolling the list grows the panel up to all of them.
+    private var panelHeight: CGFloat = 0.0
+    private var minPanelHeight: CGFloat = 0.0
+    private var maxPanelHeight: CGFloat = 0.0
 
     public init(items: [MindGramAttachMenuItem], isDark: Bool, select: @escaping (Int) -> Void) {
         self.items = items
@@ -67,6 +71,8 @@ public final class MindGramAttachMenuView: UIView {
         self.panel.addSubview(self.effectView)
 
         self.scrollView.showsVerticalScrollIndicator = false
+        self.scrollView.alwaysBounceVertical = true
+        self.scrollView.delegate = self
         self.scrollView.contentInsetAdjustmentBehavior = .never
         self.scrollView.layer.cornerRadius = 26.0
         self.scrollView.layer.cornerCurve = .continuous
@@ -130,7 +136,13 @@ public final class MindGramAttachMenuView: UIView {
         let topLimit = self.safeAreaInsets.top + 12.0
         let bottom = self.anchor.minY - 8.0
         let contentHeight = CGFloat(self.rows.count) * self.rowHeight + self.verticalInset * 2.0
-        let height = max(self.rowHeight, min(contentHeight, bottom - topLimit))
+        self.maxPanelHeight = max(self.rowHeight, min(contentHeight, bottom - topLimit))
+        self.minPanelHeight = min(self.maxPanelHeight, self.rows.count > 4 ? self.rowHeight * 3.5 + self.verticalInset : contentHeight)
+        if self.panelHeight == 0.0 {
+            self.panelHeight = self.minPanelHeight
+        }
+        self.panelHeight = max(self.minPanelHeight, min(self.maxPanelHeight, self.panelHeight))
+        let height = self.panelHeight
 
         let transform = self.panel.transform
         self.panel.transform = .identity
@@ -140,7 +152,6 @@ public final class MindGramAttachMenuView: UIView {
         self.effectView.frame = CGRect(origin: .zero, size: CGSize(width: width, height: height))
         self.scrollView.frame = CGRect(origin: .zero, size: CGSize(width: width, height: height))
         self.scrollView.contentSize = CGSize(width: width, height: contentHeight)
-        self.scrollView.isScrollEnabled = contentHeight > height
         for (index, row) in self.rows.enumerated() {
             row.frame = CGRect(x: 0.0, y: self.verticalInset + CGFloat(index) * self.rowHeight, width: width, height: self.rowHeight)
         }
@@ -236,6 +247,31 @@ private final class MindGramAttachMenuRow: UIControl {
         if let badge = self.badge {
             badge.sizeToFit()
             badge.center = CGPoint(x: self.label.frame.maxX + 4.0 + badge.bounds.width / 2.0, y: self.label.frame.midY)
+        }
+    }
+}
+
+extension MindGramAttachMenuView {
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let offset = scrollView.contentOffset.y
+        if offset > 0.0 && self.panelHeight < self.maxPanelHeight {
+            // Scrolling into the list: the panel grows first, the list scrolls after.
+            let grow = min(offset, self.maxPanelHeight - self.panelHeight)
+            self.panelHeight += grow
+            scrollView.contentOffset.y = offset - grow
+            self.layoutMenu()
+        } else if offset < 0.0 && self.panelHeight > self.minPanelHeight && scrollView.isDragging {
+            // Pulling down at the top shrinks it back.
+            let shrink = min(-offset, self.panelHeight - self.minPanelHeight)
+            self.panelHeight -= shrink
+            scrollView.contentOffset.y = offset + shrink
+            self.layoutMenu()
+        }
+    }
+
+    public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        if scrollView.contentOffset.y < -60.0 {
+            self.dismiss()
         }
     }
 }

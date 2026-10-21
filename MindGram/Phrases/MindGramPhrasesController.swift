@@ -64,6 +64,7 @@ public func mindGramPhrasesController(context: AccountContext) -> ViewController
 
     let controller = mindGramListController(context: context, title: { $0.t("Быстрые фразы", "Quick Phrases") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.header(id: -11, section: -1, text: strings.t("ПРЕВЬЮ", "PREVIEW")))
         entries.append(.custom(id: -10, section: -1, key: "preview", revision: MindGramPhrases.phrases.count * 31 + MindGramPhrases.triggers.hashValue))
         entries.append(.toggle(id: 0, section: 0, title: strings.t("Быстрые фразы", "Quick Phrases"), info: strings.t("Символ + название в любом чате", "Trigger + name in any chat"), value: MindGramPhrases.isEnabled))
         entries.append(.value(id: 1, section: 0, title: strings.t("Символы вызова", "Trigger Symbols"), value: MindGramPhrases.triggers))

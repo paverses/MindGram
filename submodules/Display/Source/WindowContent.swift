@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import MindGramCore
 import AsyncDisplayKit
 import SwiftSignalKit
 
@@ -360,6 +361,7 @@ public class Window1 {
     private var keyboardWillHideObserver: AnyObject?
     private var keyboardTypeChangeObserver: AnyObject?
     private var voiceOverStatusObserver: AnyObject?
+    private var mindGramBadgeObserver: AnyObject?
     
     private var windowLayout: WindowLayout
     private var updatingLayout: UpdatingLayout?
@@ -449,7 +451,8 @@ public class Window1 {
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         self.badgeView = UIImageView()
-        self.badgeView.image = UIImage(bundleImageName: "Components/AppBadge")
+        // MindGram: «Бейдж в вырезе» — the chosen badge, or Telegram's own.
+        self.badgeView.image = MindGramBadge.currentImage ?? UIImage(bundleImageName: "Components/AppBadge")
         self.badgeView.isHidden = true
         
         self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
@@ -807,6 +810,20 @@ public class Window1 {
             })
         }
         
+        // MindGram: a badge picked in Оформление shows at once.
+        self.mindGramBadgeObserver = NotificationCenter.default.addObserver(forName: MindGramSettings.didChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            let image = MindGramBadge.currentImage ?? UIImage(bundleImageName: "Components/AppBadge")
+            if self.badgeView.image !== image {
+                self.badgeView.image = image
+                if let image {
+                    self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: self.deviceMetrics.appBadgeTopOffset), size: image.size)
+                }
+            }
+        })
+
         let recognizer = WindowPanRecognizer(target: self, action: #selector(self.panGesture(_:)))
         recognizer.cancelsTouchesInView = false
         recognizer.delaysTouchesBegan = false
