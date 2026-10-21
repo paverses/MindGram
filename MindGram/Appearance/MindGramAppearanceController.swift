@@ -16,7 +16,9 @@ private let experimentToggles: [MindGramToggle] = [
     .quickActionsMenu,
     .noContextBlur,
     .largerReactions,
-    .roundProfileButtons
+    .roundProfileButtons,
+    .squareProfileAvatar,
+    .avatarBackdrop
 ]
 
 /// Оформление: the classic (pre-glass) Telegram design switch, and the owner's design experiments.
@@ -55,10 +57,14 @@ func mindGramAppearanceController(context: AccountContext) -> ViewController {
             presentRestartToast()
             return
         }
-        let index = Int(id) - 11
+        let index = Int(id) - 12
         if index >= 0 && index < experimentToggles.count {
             MindGramSettings.set(experimentToggles[index], value)
         }
+    }, customItem: { _, presentationData, section in
+        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 230.0, revision: experimentToggles.reduce(0, { $0 * 2 + (MindGramSettings.isOn($1) ? 1 : 0) }), build: { size, isDark in
+            return MindGramPreviews.experiments(size: size, isDark: isDark)
+        })
     })
 
     let controller = mindGramListController(context: context, title: { $0.appearance }, arguments: arguments, extraUpdates: accountPeer, entries: { _, strings in
@@ -68,8 +74,9 @@ func mindGramAppearanceController(context: AccountContext) -> ViewController {
 
         if MindGramOwner.isOwner(userId: context.account.peerId.id._internalGetInt64Value(), username: username) {
             entries.append(.header(id: 10, section: 1, text: strings.t("ЭКСПЕРИМЕНТЫ", "EXPERIMENTS")))
+            entries.append(.custom(id: 11, section: 1, key: "preview", revision: experimentToggles.reduce(0, { $0 * 2 + (MindGramSettings.isOn($1) ? 1 : 0) })))
             for (index, toggle) in experimentToggles.enumerated() {
-                entries.append(.toggle(id: 11 + Int32(index), section: 1, title: strings.toggleTitle(toggle), info: strings.toggleInfo(toggle), value: MindGramSettings.isOn(toggle)))
+                entries.append(.toggle(id: 12 + Int32(index), section: 1, title: strings.toggleTitle(toggle), info: strings.toggleInfo(toggle), value: MindGramSettings.isOn(toggle)))
             }
             entries.append(.footer(id: 20, section: 1, text: strings.t("Этот раздел видите только вы. Круглые кнопки работают вместе с «Liquid Glass в профиле».", "Only you see this section. Round buttons work together with Liquid Glass Profile.")))
         }

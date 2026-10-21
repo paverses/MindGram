@@ -58,10 +58,15 @@ func mindGramPhrasesController(context: AccountContext) -> ViewController {
             sheet.addAction(UIAlertAction(title: strings.t("Отмена", "Cancel"), style: .cancel))
             presentUIKitImpl?(sheet)
         }
-    })
+    }, customItem: { _, presentationData, section in
+        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: MindGramPhrases.phrases.count * 31 + MindGramPhrases.triggers.hashValue, build: { size, isDark in
+            return MindGramPreviews.phrases(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
+        })
+    }))
 
     let controller = mindGramListController(context: context, title: { $0.t("Быстрые фразы", "Quick Phrases") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: MindGramPhrases.phrases.count * 31 + MindGramPhrases.triggers.hashValue))
         entries.append(.toggle(id: 0, section: 0, title: strings.t("Быстрые фразы", "Quick Phrases"), info: strings.t("Символ + название в любом чате", "Trigger + name in any chat"), value: MindGramPhrases.isEnabled))
         entries.append(.value(id: 1, section: 0, title: strings.t("Символы вызова", "Trigger Symbols"), value: MindGramPhrases.triggers))
         let example = (MindGramPhrases.triggerList.last ?? "/") + strings.t("адрес", "address")

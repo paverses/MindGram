@@ -4,6 +4,8 @@ import Display
 import AsyncDisplayKit
 import AccountContext
 import TelegramPresentationData
+import ComponentFlow
+import GlassBackgroundComponent
 
 final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
@@ -12,6 +14,8 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     private let itemContainerNode: ASDisplayNode
     
     private var currentItems: [PeerInfoScreenItem] = []
+    private var mindGramGlassView: GlassBackgroundView?
+    private var mindGramMaskLayer: CAShapeLayer?
     var itemNodes: [AnyHashable: PeerInfoScreenItemNode] = [:]
     
     override init() {
@@ -126,6 +130,7 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset), size: CGSize(width: width, height: max(0.0, contentWithBackgroundHeight - contentWithBackgroundOffset))))
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundHeight), size: CGSize(width: width, height: UIScreenPixel)))
+        self.mindGramUpdateGlass(width: width, backgroundFrame: CGRect(origin: CGPoint(x: 0.0, y: contentWithBackgroundOffset), size: CGSize(width: width, height: max(0.0, contentWithBackgroundHeight - contentWithBackgroundOffset))), hasCorners: hasCorners, presentationData: presentationData)
         
         if contentHeight.isZero {
             transition.updateAlpha(node: self.topSeparatorNode, alpha: 0.0)
@@ -144,5 +149,51 @@ final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
                 itemNode.animateErrorIfNeeded()
             }
         }
+    }
+}
+
+extension PeerInfoScreenItemSectionContainerNode {
+    // MindGram: "Liquid Glass в профиле" — sections of profiles and Settings become clear glass. The rows paint their
+    // rounded corners in the screen colour, so the section is clipped to the same rounding to hide those patches.
+    fileprivate func mindGramUpdateGlass(width: CGFloat, backgroundFrame: CGRect, hasCorners: Bool, presentationData: PresentationData) {
+        guard MindGramSettings.isOn(.glassProfile), hasCorners, !backgroundFrame.isEmpty else {
+            if let glassView = self.mindGramGlassView {
+                self.mindGramGlassView = nil
+                glassView.removeFromSuperview()
+            }
+            if self.mindGramMaskLayer != nil {
+                self.mindGramMaskLayer = nil
+                self.layer.mask = nil
+            }
+            self.backgroundNode.isHidden = false
+            return
+        }
+        let cornerRadius: CGFloat = 28.0
+        let glassView: GlassBackgroundView
+        if let current = self.mindGramGlassView {
+            glassView = current
+        } else {
+            glassView = GlassBackgroundView()
+            glassView.isUserInteractionEnabled = false
+            self.mindGramGlassView = glassView
+            self.view.insertSubview(glassView, at: 0)
+        }
+        glassView.frame = backgroundFrame
+        glassView.update(size: backgroundFrame.size, cornerRadius: cornerRadius, isDark: presentationData.theme.overallDarkAppearance, tintColor: GlassBackgroundView.TintColor(kind: .panel), transition: .immediate)
+        self.backgroundNode.isHidden = true
+
+        let maskLayer: CAShapeLayer
+        if let current = self.mindGramMaskLayer {
+            maskLayer = current
+        } else {
+            maskLayer = CAShapeLayer()
+            self.mindGramMaskLayer = maskLayer
+            self.layer.mask = maskLayer
+        }
+        let path = UIBezierPath(rect: CGRect(x: 0.0, y: 0.0, width: width, height: backgroundFrame.minY))
+        path.append(UIBezierPath(roundedRect: backgroundFrame, cornerRadius: cornerRadius))
+        path.append(UIBezierPath(rect: CGRect(x: 0.0, y: backgroundFrame.maxY, width: width, height: 10000.0)))
+        maskLayer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: backgroundFrame.maxY + 10000.0))
+        maskLayer.path = path.cgPath
     }
 }

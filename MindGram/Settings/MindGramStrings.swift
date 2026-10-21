@@ -70,6 +70,10 @@ public struct MindGramStrings {
             return t("Крупнее реакции", "Larger Reactions")
         case .roundProfileButtons:
             return t("Круглые кнопки в профиле", "Round Profile Buttons")
+        case .squareProfileAvatar:
+            return t("Квадратная аватарка", "Square Avatar")
+        case .avatarBackdrop:
+            return t("Фон из аватарки", "Avatar Backdrop")
         }
     }
 
@@ -96,7 +100,7 @@ public struct MindGramStrings {
         case .glassMessages:
             return t("Прозрачное стекло на пузырях", "Clear glass on message bubbles")
         case .glassProfile:
-            return t("Стеклянные кнопки в профиле", "Glass buttons in profiles")
+            return t("Стеклянные кнопки и разделы профиля и настроек", "Glass buttons and sections in profiles and Settings")
         case .glassBotButtons:
             return t("Стекло на инлайн-кнопках ботов", "Glass on bot inline buttons")
         case .plusAttachMenu:
@@ -108,7 +112,11 @@ public struct MindGramStrings {
         case .largerReactions:
             return t("Реакции над сообщением больше", "Bigger reactions above messages")
         case .roundProfileButtons:
-            return t("Звонок, Звук, Поиск — круги", "Call, Mute, Search as circles")
+            return t("Только иконки в больших кругах", "Call, Mute, Search as circles")
+        case .squareProfileAvatar:
+            return t("Сразу большое фото, без растягивания", "Large photo at once, no pull-down")
+        case .avatarBackdrop:
+            return t("Размытое фото за кнопками и списком", "Blurred photo behind buttons and rows")
         }
     }
 

@@ -432,6 +432,8 @@ extension ChatControllerImpl {
                     if let picked = mindGramPickedAttachButton {
                         mindGramPickedAttachButton = nil
                         initialButton = picked
+                        // Only the picked screen, without the old tab bar (gallery / file / location …).
+                        buttons = [picked]
                     } else {
                         strongSelf.mindGramPresentAttachMenu(buttons: buttons)
                         return

@@ -85,10 +85,15 @@ func mindGramCirclesController(context: AccountContext) -> ViewController {
         default:
             break
         }
+    }, customItem: { _, presentationData, section in
+        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 200.0, revision: 0, build: { size, isDark in
+            return MindGramPreviews.circles(size: size, isDark: isDark)
+        })
     })
 
     let controller = mindGramListController(context: context, title: { $0.t("Кружки", "Round Videos") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: 0))
         entries.append(.toggle(id: 0, section: 0, title: strings.t("Эффекты в кружках", "Round Video Effects"), info: strings.t("Маски и фильтры при записи", "Masks and filters while recording"), value: MindGramRoundVideo.isEnabled))
         if MindGramRoundVideo.isEnabled {
             entries.append(.toggle(id: 1, section: 0, title: strings.t("Свайп по кружку", "Swipe the Circle"), info: strings.t("Листать эффекты при записи", "Switch effects while recording"), value: MindGramRoundVideo.swipeToSwitch))

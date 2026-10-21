@@ -1278,9 +1278,9 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         let itemSpacing: CGFloat = 8.0
         // MindGram: "Крупнее реакции" (Оформление → Эксперименты).
         let mindGramLarger = MindGramSettings.isOn(.largerReactions)
-        var itemSize: CGFloat = mindGramLarger ? 40.0 : 36.0
+        var itemSize: CGFloat = mindGramLarger ? 46.0 : 36.0
         let verticalInset: CGFloat = 13.0
-        let rowHeight: CGFloat = mindGramLarger ? 34.0 : 30.0
+        let rowHeight: CGFloat = mindGramLarger ? 40.0 : 30.0
         
         var itemCount: Int
         var visibleContentWidth: CGFloat
@@ -1291,12 +1291,17 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             
             var maxRowItemCount = Int(floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing) / (itemSize + itemSpacing)))
             
-            if maxRowItemCount < 8 {
+            // MindGram: larger reactions fit fewer per row instead of shrinking back to eight.
+            if maxRowItemCount < 8 && !mindGramLarger {
                 itemSize = floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing - 8 * itemSpacing) / 8.0)
                 maxRowItemCount = Int(floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing) / (itemSize + itemSpacing)))
             }
             
             maxRowItemCount = min(maxRowItemCount, 8)
+            if mindGramLarger && maxRowItemCount < 5 {
+                itemSize = floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing - 5 * itemSpacing) / 5.0)
+                maxRowItemCount = 5
+            }
             itemCount = min(totalItemSlotCount, maxRowItemCount)
             if self.isExpanded {
                 itemCount = maxRowItemCount

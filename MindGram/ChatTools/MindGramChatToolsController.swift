@@ -163,10 +163,15 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
         default:
             break
         }
+    }, customItem: { _, presentationData, section in
+        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: 0, build: { size, isDark in
+            return MindGramPreviews.chatTools(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
+        })
     })
 
     let controller = mindGramListController(context: context, title: { $0.t("Чат и перевод", "Chat & Translation") }, arguments: arguments, extraUpdates: translationSettings, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: 0))
 
         entries.append(.header(id: 0, section: 0, text: strings.t("ПЕРЕВОД", "TRANSLATION")))
         entries.append(.value(id: 1, section: 0, title: strings.t("Переводчик", "Translator"), value: MindGramTranslator.provider.title(isRussian: strings.isRussian)))

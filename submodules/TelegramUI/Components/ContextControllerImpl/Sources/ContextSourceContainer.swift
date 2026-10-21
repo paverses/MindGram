@@ -649,6 +649,8 @@ final class ContextSourceContainer: ASDisplayNode {
         
         var childLayout = layout
         
+        // MindGram: "Без размытия при зажатии" (Оформление → Эксперименты) keeps only the dim.
+        let mindGramBlur = !MindGramSettings.isOn(.noContextBlur)
         if let activeSource = self.activeSource {
             switch activeSource.source {
             case .location, .reference:
@@ -661,8 +663,8 @@ final class ContextSourceContainer: ASDisplayNode {
             case let .extracted(extracted):
                 self.backgroundNode.updateColor(
                     color: extracted.blurBackground ? presentationData.theme.contextMenu.dimColor : .clear,
-                    enableBlur: extracted.blurBackground,
-                    forceKeepBlur: extracted.blurBackground,
+                    enableBlur: extracted.blurBackground && mindGramBlur,
+                    forceKeepBlur: extracted.blurBackground && mindGramBlur,
                     transition: .immediate
                 )
             case .controller:
@@ -676,8 +678,8 @@ final class ContextSourceContainer: ASDisplayNode {
                 } else {
                     self.backgroundNode.updateColor(
                         color: presentationData.theme.contextMenu.dimColor,
-                        enableBlur: true,
-                        forceKeepBlur: true,
+                        enableBlur: mindGramBlur,
+                        forceKeepBlur: mindGramBlur,
                         transition: .immediate
                     )
                 }

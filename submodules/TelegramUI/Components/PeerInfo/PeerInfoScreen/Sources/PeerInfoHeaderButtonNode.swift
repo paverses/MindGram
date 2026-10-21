@@ -313,9 +313,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         let backgroundY: CGFloat = size.height * (1.0 - fraction)
         var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundY), size: CGSize(width: size.width, height: max(0.0, size.height - backgroundY)))
         var backgroundCornerRadius = min(16.0, backgroundFrame.height * 0.5)
-        // MindGram: "Круглые кнопки в профиле" — a circle above the title; works with the glass too.
+        // MindGram: "Круглые кнопки в профиле" — a large circle with the icon only, no title; works with the glass too.
         let mindGramRound = MindGramSettings.isOn(.roundProfileButtons)
-        let mindGramCircle = min(46.0, size.height - titleSize.height - 3.0)
+        let mindGramCircle = min(size.width, size.height)
+        self.textNode.isHidden = mindGramRound
         if mindGramRound {
             let diameter = max(0.0, mindGramCircle * fraction)
             backgroundFrame = CGRect(x: floor((size.width - diameter) / 2.0), y: floor((mindGramCircle - diameter) / 2.0), width: diameter, height: diameter)

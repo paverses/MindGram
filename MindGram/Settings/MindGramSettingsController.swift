@@ -13,16 +13,17 @@ public let mindGramSettingsIcon: UIImage = MindGramLogo.image(size: CGSize(width
 private enum MindGramMenuItem: Int32 {
     case appearance = 0
     case profile = 1
-    case tabs = 2
-    case liquidGlass = 3
-    case menuSections = 4
-    case ghost = 5
-    case deleted = 6
-    case chatTools = 7
-    case phrases = 8
-    case circles = 9
-    case report = 10
-    case footer = 11
+    case wallpaper = 2
+    case tabs = 3
+    case liquidGlass = 4
+    case menuSections = 5
+    case ghost = 6
+    case deleted = 7
+    case chatTools = 8
+    case phrases = 9
+    case circles = 10
+    case report = 11
+    case footer = 12
 }
 
 /// The "MindGram" screen opened from Settings: one row per MindGram section.
@@ -38,6 +39,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             pushImpl?(mindGramAppearanceController(context: context))
         case .profile:
             pushImpl?(mindGramProfileController(context: context))
+        case .wallpaper:
+            pushImpl?(mindGramProfileWallpaperController(context: context))
         case .tabs:
             pushImpl?(mindGramTabsController(context: context))
         case .liquidGlass:
@@ -65,6 +68,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             return PresentationResourcesSettings.appearance
         case "profile":
             return PresentationResourcesSettings.myProfile
+        case "wallpaper":
+            return PresentationResourcesSettings.photosLightBlue
         case "tabs":
             return PresentationResourcesSettings.chatFolders
         case "glass":
@@ -93,6 +98,7 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
         return [
             .disclosure(id: MindGramMenuItem.appearance.rawValue, section: section, title: strings.appearance, icon: "appearance"),
             .disclosure(id: MindGramMenuItem.profile.rawValue, section: section, title: strings.profile, icon: "profile"),
+            .disclosure(id: MindGramMenuItem.wallpaper.rawValue, section: section, title: strings.t("Обои профиля", "Profile Wallpaper"), icon: "wallpaper"),
             .disclosure(id: MindGramMenuItem.tabs.rawValue, section: section, title: strings.tabs, icon: "tabs"),
             .disclosure(id: MindGramMenuItem.liquidGlass.rawValue, section: section, title: strings.liquidGlass, icon: "glass"),
             .disclosure(id: MindGramMenuItem.menuSections.rawValue, section: section, title: strings.menuSections, icon: "menu"),

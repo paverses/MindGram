@@ -53,9 +53,9 @@ public func mindGramApplyQuickActions(_ items: [ContextMenuItem], selectTitle: S
     }
 
     let row = MindGramQuickActionsItem(buttons: [
-        MindGramQuickActionsItem.Button(title: selectTitle, iconName: "Chat/Context Menu/Select", isDestructive: false, item: select),
-        MindGramQuickActionsItem.Button(title: copyTitle, iconName: "Chat/Context Menu/Copy", isDestructive: false, item: copy),
-        MindGramQuickActionsItem.Button(title: deleteTitles.first ?? "", iconName: "Chat/Context Menu/Delete", isDestructive: true, item: delete)
+        MindGramQuickActionsItem.Button(title: selectTitle, iconName: "checkmark.circle.fill", isDestructive: false, item: select),
+        MindGramQuickActionsItem.Button(title: copyTitle, iconName: "doc.on.doc.fill", isDestructive: false, item: copy),
+        MindGramQuickActionsItem.Button(title: deleteTitles.first ?? "", iconName: "trash.fill", isDestructive: true, item: delete)
     ])
     var result: [ContextMenuItem] = [.custom(row, false)]
     if !cleaned.isEmpty {
@@ -156,7 +156,9 @@ private final class MindGramQuickActionsNode: ASDisplayNode, ContextMenuCustomNo
             if button.item == nil {
                 color = color.withAlphaComponent(0.35)
             }
-            self.icons[index].image = generateTintedImage(image: UIImage(bundleImageName: button.iconName), color: color)
+            // Filled SF Symbols: the outline icons left their insides empty.
+            self.icons[index].image = UIImage(systemName: button.iconName, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22.0, weight: .medium))?.withRenderingMode(.alwaysTemplate)
+            self.icons[index].tintColor = color
             self.labels[index].textColor = color
         }
         for divider in self.dividers {

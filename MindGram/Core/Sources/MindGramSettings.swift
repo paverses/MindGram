@@ -23,6 +23,8 @@ public enum MindGramToggle: String, CaseIterable {
     case noContextBlur
     case largerReactions
     case roundProfileButtons
+    case squareProfileAvatar
+    case avatarBackdrop
 }
 
 /// A row of the Settings screen that Разделы меню can hide.

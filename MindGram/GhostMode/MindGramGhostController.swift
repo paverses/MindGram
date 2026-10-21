@@ -71,10 +71,15 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
         default:
             return nil
         }
+    }, customItem: { _, presentationData, section in
+        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 170.0, revision: 0, build: { size, isDark in
+            return MindGramPreviews.ghost(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
+        })
     })
 
     let controller = mindGramListController(context: context, title: { $0.ghostMode }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: 0))
         entries.append(.toggle(id: GhostRow.master.rawValue, section: 0, title: strings.ghostMode, info: strings.ghostModeInfo, value: MindGramGhost.isEnabled))
         if MindGramGhost.isEnabled {
             entries.append(.header(id: 9, section: 1, text: strings.ghostWhatHeader))

@@ -31,8 +31,8 @@ public final class MindGramAttachMenuView: UIView, UIScrollViewDelegate {
     private let scrollView = UIScrollView()
     private var rowViews: [UIView] = []
 
-    private let rowHeight: CGFloat = 62.0
-    private let panelWidthMax: CGFloat = 300.0
+    private let rowHeight: CGFloat = 52.0
+    private let panelWidthMax: CGFloat = 260.0
     private var anchor: CGRect = .zero
     private var panelHeight: CGFloat = 0.0
     private var minPanelHeight: CGFloat = 0.0
@@ -93,19 +93,19 @@ public final class MindGramAttachMenuView: UIView, UIScrollViewDelegate {
 
         let circle = UIView()
         circle.backgroundColor = item.color
-        circle.layer.cornerRadius = 20.0
+        circle.layer.cornerRadius = 17.0
         circle.isUserInteractionEnabled = false
         circle.tag = 1
         let gradient = CAGradientLayer()
         gradient.colors = [UIColor(white: 1.0, alpha: 0.28).cgColor, UIColor(white: 1.0, alpha: 0.0).cgColor]
         gradient.startPoint = CGPoint(x: 0.5, y: 0.0)
         gradient.endPoint = CGPoint(x: 0.5, y: 1.0)
-        gradient.cornerRadius = 20.0
-        gradient.frame = CGRect(x: 0.0, y: 0.0, width: 40.0, height: 40.0)
+        gradient.cornerRadius = 17.0
+        gradient.frame = CGRect(x: 0.0, y: 0.0, width: 34.0, height: 34.0)
         circle.layer.addSublayer(gradient)
         row.addSubview(circle)
 
-        let icon = UIImageView(image: UIImage(systemName: item.symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 18.0, weight: .semibold)))
+        let icon = UIImageView(image: UIImage(systemName: item.symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: 15.0, weight: .semibold)))
         icon.tintColor = .white
         icon.contentMode = .center
         icon.tag = 2
@@ -113,7 +113,7 @@ public final class MindGramAttachMenuView: UIView, UIScrollViewDelegate {
 
         let label = UILabel()
         label.text = item.title
-        label.font = UIFont.systemFont(ofSize: 20.0, weight: .regular)
+        label.font = UIFont.systemFont(ofSize: 17.0, weight: .regular)
         label.textColor = self.isDark ? .white : .black
         label.tag = 3
         row.addSubview(label)
@@ -189,12 +189,12 @@ public final class MindGramAttachMenuView: UIView, UIScrollViewDelegate {
         for (index, row) in self.rowViews.enumerated() {
             row.frame = CGRect(x: 0.0, y: 10.0 + CGFloat(index) * self.rowHeight, width: width, height: self.rowHeight)
             if let circle = row.viewWithTag(1) {
-                circle.frame = CGRect(x: 20.0, y: (self.rowHeight - 40.0) / 2.0, width: 40.0, height: 40.0)
+                circle.frame = CGRect(x: 16.0, y: (self.rowHeight - 34.0) / 2.0, width: 34.0, height: 34.0)
                 circle.viewWithTag(2)?.frame = circle.bounds
             }
             if let label = row.viewWithTag(3) as? UILabel {
-                let size = label.sizeThatFits(CGSize(width: width - 120.0, height: 30.0))
-                label.frame = CGRect(x: 78.0, y: (self.rowHeight - size.height) / 2.0, width: min(size.width, width - 120.0), height: size.height)
+                let size = label.sizeThatFits(CGSize(width: width - 100.0, height: 30.0))
+                label.frame = CGRect(x: 62.0, y: (self.rowHeight - size.height) / 2.0, width: min(size.width, width - 100.0), height: size.height)
                 if let badge = row.viewWithTag(4) {
                     badge.sizeToFit()
                     badge.center = CGPoint(x: label.frame.maxX + 6.0 + badge.bounds.width / 2.0, y: label.frame.midY)

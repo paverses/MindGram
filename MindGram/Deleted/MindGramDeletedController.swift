@@ -122,10 +122,15 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
         default:
             break
         }
-    })
+    }, customItem: { _, presentationData, section in
+        return mindGramPreviewItem(presentationData: presentationData, sectionId: section, height: 150.0, revision: mindGramDeletedPreviewRevision(), build: { size, isDark in
+            return MindGramPreviews.deleted(size: size, isDark: isDark, isRussian: MindGramStrings(context.sharedContext.currentPresentationData.with { $0 }).isRussian)
+        })
+    }))
 
     let controller = mindGramListController(context: context, title: { $0.t("Удалённые и правки", "Deleted & Edited") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: mindGramDeletedPreviewRevision()))
         entries.append(.toggle(id: 0, section: 0, title: strings.t("Сохранять удалённые", "Keep Deleted Messages"), info: strings.t("Удалённое не исчезает у вас", "Deleted messages stay with you"), value: MindGramDeleted.isEnabled))
         if MindGramDeleted.isEnabled {
             entries.append(.header(id: 10, section: 1, text: strings.t("ГДЕ СОХРАНЯТЬ", "WHERE TO KEEP")))
@@ -179,4 +184,14 @@ public func mindGramEditHistoryController(context: AccountContext, versions: [Mi
         entries.append(.text(id: Int32(last * 2 + 1), section: ItemListSectionId(last), text: currentText.isEmpty ? "—" : currentText, monospace: false))
         return entries
     })
+}
+
+private func mindGramDeletedPreviewRevision() -> Int {
+    var hasher = Hasher()
+    hasher.combine(MindGramDeleted.markColor)
+    hasher.combine(MindGramDeleted.markScalePercent)
+    hasher.combine(MindGramDeleted.opacityPercent)
+    hasher.combine(MindGramDeleted.mark.prefix)
+    hasher.combine(MindGramDeleted.showsWord)
+    return hasher.finalize()
 }

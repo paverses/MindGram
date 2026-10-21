@@ -1,4 +1,5 @@
 import Foundation
+import MindGramUI
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -2624,6 +2625,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if let mindGramSettingsObserver = self.mindGramSettingsObserver {
             NotificationCenter.default.removeObserver(mindGramSettingsObserver)
         }
+        self.mindGramBackdropDisposable.dispose()
     }
     
     override func didLoad() {
@@ -5402,6 +5404,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.headerNode.updateIsAvatarExpanded(false, transition: transition)
             self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
         }
+        // MindGram: "Квадратная аватарка" — the profile (and Settings) opens with the photo already expanded.
+        if self.mindGramSquareAvatarEligible(isLandscape: layout.size.width > layout.size.height) && !self.headerNode.isAvatarExpanded && self.scrollNode.view.contentOffset.y < 1.0 {
+            self.headerNode.updateIsAvatarExpanded(true, transition: .immediate)
+        }
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight + 10.0, transition: transition)
@@ -5809,6 +5815,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var hasQrButton = false
     fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) {
         let offsetY = self.scrollNode.view.contentOffset.y
+        self.mindGramUpdateBackdrop()
         
         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
             var bottomInset = self.scrollNode.view.contentInset.bottom
@@ -5993,7 +6000,93 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var canAddVelocity: Bool = false
     
     private var canOpenAvatarByDragging = false
+
+    // MindGram: "Квадратная аватарка" (Оформление → Эксперименты) applies to a profile or Settings with a photo.
+    private func mindGramSquareAvatarEligible(isLandscape: Bool) -> Bool {
+        guard MindGramSettings.isOn(.squareProfileAvatar), !isLandscape, !self.state.isEditing, !self.isMediaOnly, self.chatLocation.threadId == nil, self.state.updatingAvatar == nil else {
+            return false
+        }
+        guard let peer = self.data?.peer, peer.smallProfileImage != nil else {
+            return false
+        }
+        return true
+    }
+
+    // MindGram: "Фон из аватарки" — the blurred photo behind the header buttons and the first rows; scrolls with them.
+    private var mindGramBackdrop: MindGramAvatarBackdropView?
+    private let mindGramBackdropDisposable = MetaDisposable()
+
+    // MindGram: "Обои профиля" — a picture behind your profile and Settings (or every profile), fixed while scrolling.
+    private var mindGramWallpaper: MindGramProfileWallpaperView?
     
+    private func mindGramUpdateWallpaper() {
+        let isOwnProfile = self.data?.peer?.id == self.context.account.peerId
+        guard !self.isMediaOnly, MindGramProfileWallpaper.applies(isSettings: self.isSettings, isOwnProfile: isOwnProfile) else {
+            if let wallpaper = self.mindGramWallpaper {
+                self.mindGramWallpaper = nil
+                wallpaper.removeFromSuperview()
+            }
+            return
+        }
+        let wallpaper: MindGramProfileWallpaperView
+        if let current = self.mindGramWallpaper {
+            wallpaper = current
+        } else {
+            wallpaper = MindGramProfileWallpaperView(frame: self.bounds)
+            self.mindGramWallpaper = wallpaper
+            self.view.insertSubview(wallpaper, at: 0)
+        }
+        wallpaper.frame = self.bounds
+        wallpaper.updateFromSettings()
+    }
+    
+    private func mindGramUpdateBackdrop() {
+        self.mindGramUpdateWallpaper()
+        guard MindGramSettings.isOn(.avatarBackdrop), !self.isMediaOnly, let (layout, _) = self.validLayout, let peer = self.data?.peer, let representation = peer.largeProfileImage ?? peer.smallProfileImage else {
+            if let backdrop = self.mindGramBackdrop {
+                self.mindGramBackdrop = nil
+                self.mindGramBackdropDisposable.set(nil)
+                backdrop.removeFromSuperview()
+            }
+            return
+        }
+        let isDark = self.presentationData.theme.overallDarkAppearance
+        let backdrop: MindGramAvatarBackdropView
+        if let current = self.mindGramBackdrop {
+            backdrop = current
+            backdrop.updateIsDark(isDark)
+        } else {
+            backdrop = MindGramAvatarBackdropView(isDark: isDark)
+            self.mindGramBackdrop = backdrop
+            if let wallpaper = self.mindGramWallpaper {
+                self.view.insertSubview(backdrop, aboveSubview: wallpaper)
+            } else {
+                self.view.insertSubview(backdrop, at: 0)
+            }
+        }
+        let height = layout.size.width + 460.0
+        backdrop.frame = CGRect(x: 0.0, y: -self.scrollNode.view.contentOffset.y, width: layout.size.width, height: height)
+
+        let key = representation.resource.id.stringRepresentation
+        if backdrop.imageKey != key {
+            backdrop.imageKey = key
+            let mediaBox = self.context.account.postbox.mediaBox
+            if let small = peer.smallProfileImage, small.resource.id != representation.resource.id, let path = mediaBox.completedResourcePath(small.resource) {
+                MindGramAvatarBackdropView.loadImage(path: path, completion: { [weak backdrop] image in
+                    backdrop?.setImage(image)
+                })
+            }
+            self.mindGramBackdropDisposable.set((mediaBox.resourceData(representation.resource)
+            |> filter { $0.complete }
+            |> take(1)
+            |> deliverOnMainQueue).startStrict(next: { [weak backdrop] data in
+                MindGramAvatarBackdropView.loadImage(path: data.path, completion: { image in
+                    backdrop?.setImage(image)
+                })
+            }))
+        }
+    }
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !self.ignoreScrolling else {
             return
@@ -6016,7 +6109,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if let (layout, _) = self.validLayout, layout.size.width > layout.size.height {
                 isLandscape = true
             }
-            if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
+            // MindGram: "Квадратная аватарка" — expanded at the top, no pull-down, no gallery by dragging.
+            if self.mindGramSquareAvatarEligible(isLandscape: isLandscape) {
+                if offsetY < 0.0 {
+                    scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: 0.0)
+                }
+                shouldBeExpanded = offsetY < 1.0
+                self.canOpenAvatarByDragging = false
+            } else if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
                 if let peer = self.data?.peer, self.chatLocation.threadId == nil, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && !isLandscape {
                     shouldBeExpanded = true
                     
