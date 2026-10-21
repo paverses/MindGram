@@ -209,7 +209,7 @@ public enum MindGramBleep {
                 self.queue.async {
                     var bleeped = samples
                     self.bleep(samples: &bleeped, sampleRate: 48000.0, channels: 1, ranges: ranges)
-                    let item = TGDataItem(data: Data())
+                    let item: TGDataItem = TGDataItem(data: Data())
                     let writer = TGOggOpusWriter()
                     guard writer.begin(with: item) else {
                         completion(nil)
@@ -227,7 +227,7 @@ public enum MindGramBleep {
                         offset += count
                     }
                     let _ = writer.writeFrame(nil, frameByteCount: 0)
-                    let result = item.data()
+                    let result: Data = item.data()
                     completion(result.isEmpty ? nil : result)
                 }
             })
