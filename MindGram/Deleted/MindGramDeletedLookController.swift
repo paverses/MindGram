@@ -71,13 +71,13 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
         let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
         switch key {
         case "size":
-            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Размер корзины", "Trash Size"), value: MindGramDeleted.markScalePercent, onChange: { value in
+            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Размер корзины", "Trash Size"), percent: MindGramDeleted.markScalePercent, updated: { value in
                 if value != MindGramDeleted.markScalePercent {
                     MindGramDeleted.markScalePercent = value
                 }
             })), sectionId: section)
         case "opacity":
-            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Прозрачность сообщения", "Message Opacity"), value: MindGramDeleted.opacityPercent, onChange: { value in
+            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Прозрачность сообщения", "Message Opacity"), percent: MindGramDeleted.opacityPercent, updated: { value in
                 if value != MindGramDeleted.opacityPercent {
                     MindGramDeleted.opacityPercent = value
                 }
@@ -97,7 +97,7 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
         var entries: [MindGramListEntry] = []
         entries.append(.header(id: -11, section: -1, text: strings.t("ПРЕВЬЮ", "PREVIEW")))
         entries.append(.custom(id: -10, section: -1, key: "preview", revision: revision.finalize()))
-        entries.append(.toggle(id: 1, section: 0, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord, revision: revision.finalize()))
+        entries.append(.toggle(id: 1, section: 0, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord))
 
         entries.append(.header(id: 9, section: 1, text: strings.t("КОРЗИНА", "TRASH")))
         entries.append(.value(id: 10, section: 1, title: strings.t("Цвет корзины", "Trash Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor, revision: revision.finalize()))
