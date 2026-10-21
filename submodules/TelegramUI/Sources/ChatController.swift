@@ -147,6 +147,7 @@ import GlobalControlPanelsContext
 import ChatSearchNavigationContentNode
 import ChatAgeRestrictionAlertController
 import TextProcessingScreen
+import MindGramFileTools
 
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
@@ -9115,6 +9116,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
+        // MindGram: «Длинный текст — файлом»: offer to send a text over Telegram's limit as one file.
+        if !mindGramSendConfirmed, MindGramFileTools.longTextAsFile, let longText = mindGramLongText(messages) {
+            let isRussian = ["ru", "uk", "be"].contains(where: { self.presentationData.strings.baseLanguageCode.hasPrefix($0) })
+            self.present(textAlertController(context: self.context, title: isRussian ? "Длинный текст" : "Long Text", text: isRussian ? "\(longText.text.count) символов — Telegram разобьёт его на несколько сообщений. Отправить одним файлом?" : "\(longText.text.count) characters — Telegram will split it into several messages. Send it as one file?", actions: [
+                TextAlertAction(type: .genericAction, title: isRussian ? "Частями" : "In Parts", action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    mindGramSendConfirmed = true
+                    self.sendMessages(messages, media: media, postpone: postpone, commit: commit)
+                    mindGramSendConfirmed = false
+                }),
+                TextAlertAction(type: .defaultAction, title: isRussian ? "Файлом" : "As File", action: { [weak self] in
+                    self?.mindGramSendTextAsFile(longText.text, threadId: longText.threadId, replyToMessageId: longText.replyToMessageId)
+                })
+            ], actionLayout: .vertical), in: .window(.root))
+            return
+        }
         // MindGram: «Подтверждение перед отправкой» for stickers, GIFs, voice and round videos.
         if !mindGramSendConfirmed, let kind = mindGramConfirmKind(messages), MindGramSendConfirm.isOn(kind) {
             let isRussian = ["ru", "uk", "be"].contains(where: { self.presentationData.strings.baseLanguageCode.hasPrefix($0) })
@@ -11431,7 +11450,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 }
 
 // MindGram: «Подтверждение перед отправкой». Set while a confirmed send goes through.
-private var mindGramSendConfirmed = false
+var mindGramSendConfirmed = false
 
 /// What kind of easily-mistaken message `messages` sends, if any.
 private func mindGramConfirmKind(_ messages: [EnqueueMessage]) -> MindGramSendConfirm.Kind? {
@@ -11450,4 +11469,26 @@ private func mindGramConfirmKind(_ messages: [EnqueueMessage]) -> MindGramSendCo
         }
     }
     return nil
+}
+
+/// MindGram: the whole text of a send that Telegram split for being too long (plain text only).
+private func mindGramLongText(_ messages: [EnqueueMessage]) -> (text: String, threadId: Int64?, replyToMessageId: EngineMessageReplySubject?)? {
+    var parts: [String] = []
+    var threadId: Int64?
+    var replyToMessageId: EngineMessageReplySubject?
+    for message in messages {
+        guard case let .message(text, _, _, mediaReference, messageThreadId, messageReplyToMessageId, _, _, _, _) = message, mediaReference == nil, !text.isEmpty else {
+            return nil
+        }
+        if parts.isEmpty {
+            threadId = messageThreadId
+            replyToMessageId = messageReplyToMessageId
+        }
+        parts.append(text)
+    }
+    let text = parts.joined(separator: "\n")
+    guard parts.count > 1 || text.count > MindGramFileTools.longTextLimit else {
+        return nil
+    }
+    return (text, threadId, replyToMessageId)
 }

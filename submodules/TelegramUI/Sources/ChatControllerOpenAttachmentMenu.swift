@@ -2437,3 +2437,36 @@ extension ChatControllerImpl {
         menu.show(in: self.view, anchor: anchor)
     }
 }
+
+extension ChatControllerImpl {
+    /// MindGram: «Длинный текст — файлом» — the text goes into a file the user names in the «Файл» editor.
+    func mindGramSendTextAsFile(_ text: String, threadId: Int64?, replyToMessageId: EngineMessageReplySubject?) {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MindGramFiles", isDirectory: true).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let url = directory.appendingPathComponent("message.txt")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try text.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            return
+        }
+        let presentationData = self.presentationData
+        let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.baseLanguageCode.hasPrefix($0) })
+        let editor = MindGramFileEditorController(url: url, isRussian: isRussian, isDark: presentationData.theme.overallDarkAppearance, send: { [weak self] fileURL in
+            guard let self, let data = try? Data(contentsOf: fileURL) else {
+                return
+            }
+            let fileId = Int64.random(in: Int64.min ... Int64.max)
+            let resource = LocalFileMediaResource(fileId: fileId, size: Int64(data.count), isSecretRelated: false)
+            self.context.engine.resources.storeResourceData(id: EngineMediaResource.Id(resource.id), data: data)
+            let file = TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: guessMimeTypeByFileExtension(fileURL.pathExtension), size: Int64(data.count), attributes: [.FileName(fileName: fileURL.lastPathComponent)], alternativeRepresentations: [])
+            mindGramSendConfirmed = true
+            self.sendMessages([.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+            mindGramSendConfirmed = false
+        })
+        var top = self.view.window?.rootViewController
+        while let presented = top?.presentedViewController, !presented.isBeingDismissed {
+            top = presented
+        }
+        top?.present(editor, animated: true)
+    }
+}

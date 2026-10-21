@@ -89,3 +89,17 @@ public enum MindGramFileTools {
         }
     }
 }
+
+public extension MindGramFileTools {
+    /// Offer to send text over Telegram's limit as one file.
+    static var longTextAsFile: Bool {
+        get { return UserDefaults.standard.object(forKey: "MindGram.longText.enabled") as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "MindGram.longText.enabled")
+            NotificationCenter.default.post(name: Notification.Name("MindGramSettingsDidChange"), object: nil)
+        }
+    }
+
+    /// Telegram's message length limit.
+    static let longTextLimit = 4096
+}

@@ -83,6 +83,8 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             MindGramBleep.roundEnabled = value
         case 82:
             MindGramBleep.usesBeep = value
+        case 92:
+            MindGramFileTools.longTextAsFile = value
         case 90:
             MindGramFileTools.isEnabled = value
         case 41:
@@ -228,7 +230,8 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
 
         entries.append(.header(id: 89, section: 8, text: strings.t("ФАЙЛЫ", "FILES")))
         entries.append(.toggle(id: 90, section: 8, title: strings.t("Редактор файлов", "File Editor"), info: strings.t("Имя, формат, теги перед отправкой", "Name, format, tags before sending"), value: MindGramFileTools.isEnabled))
-        entries.append(.footer(id: 91, section: 8, text: strings.t("Файл из «Файлов» открывается в редакторе: переименовать, сменить расширение, изменить код (py, ts, js, mjs и ещё ~80 форматов), теги и обложку музыки, конвертировать звук (MP3, M4A, WAV, AIFF, CAF), видео и картинки.", "A file from Files opens in the editor: rename it, change its extension, edit code (py, ts, js, mjs and ~80 more), music tags and cover, convert audio (MP3, M4A, WAV, AIFF, CAF), video and images.")))
+        entries.append(.toggle(id: 92, section: 8, title: strings.t("Длинный текст — файлом", "Long Text as File"), info: strings.t("Больше 4096 символов — одним файлом", "Over 4096 characters: one file"), value: MindGramFileTools.longTextAsFile))
+        entries.append(.footer(id: 93, section: 8, text: strings.t("Файл из «Файлов» открывается в редакторе: переименовать, сменить расширение, изменить код (py, ts, js, mjs и ещё ~80 форматов), теги и обложку музыки, конвертировать звук (MP3, M4A, WAV, AIFF, CAF), видео и картинки.", "A file from Files opens in the editor: rename it, change its extension, edit code (py, ts, js, mjs and ~80 more), music tags and cover, convert audio (MP3, M4A, WAV, AIFF, CAF), video and images.")))
         return entries
     })
     presentUIKitImpl = { [weak controller] c in
