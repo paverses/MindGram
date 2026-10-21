@@ -518,7 +518,7 @@ func mindGramProfileWallpaperController(context: AccountContext) -> ViewControll
 
     let controller = mindGramListController(context: context, title: { $0.t("Обои профиля", "Profile Wallpaper") }, arguments: arguments, entries: { _, strings in
         var entries: [MindGramListEntry] = []
-        entries.append(.custom(id: 1, section: 0, key: "preview", revision: MindGramProfileWallpaper.revision * 4 + (MindGramProfileWallpaper.isEnabled ? 1 : 0)))
+        entries.append(.custom(id: -10, section: -1, key: "preview", revision: MindGramProfileWallpaper.revision * 4 + (MindGramProfileWallpaper.isEnabled ? 1 : 0)))
         entries.append(.toggle(id: 0, section: 1, title: strings.t("Обои профиля", "Profile Wallpaper"), info: strings.t("Картинка за профилем и настройками", "A picture behind profiles and Settings"), value: MindGramProfileWallpaper.isEnabled))
         entries.append(.action(id: 2, section: 1, title: strings.t("Выбрать из галереи", "Choose from Gallery")))
         entries.append(.action(id: 3, section: 1, title: strings.t("Как обои в чатах", "Same as Chat Wallpaper")))
