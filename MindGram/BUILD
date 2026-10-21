@@ -35,6 +35,8 @@ swift_library(
     ],
     deps = [
         "//MindGram/Core:MindGramCore",
+        "//MindGram/FileTools:MindGramFileTools",
+        "//MindGram/Bleep:MindGramBleep",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",

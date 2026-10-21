@@ -3,6 +3,7 @@ import UIKit
 import CoreImage
 import CoreVideo
 import Vision
+import ImageIO
 
 /// Applies a `MindGramRoundEffect` to upright square frames. Faces (Vision) are found every few frames
 /// and reused in between; the person mask for background effects is made every frame.
@@ -20,6 +21,7 @@ public final class MindGramRoundRenderer {
     private var faces: [Face] = []
     private var pool: CVPixelBufferPool?
     private var poolSize: CGSize = .zero
+    private var poolFormat: OSType = 0
     private var overlayCache: [String: CIImage] = [:]
 
     public init() {
@@ -36,7 +38,7 @@ public final class MindGramRoundRenderer {
         }
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
-        guard let output = self.makeBuffer(width: width, height: height) else {
+        guard let output = self.makeBuffer(width: width, height: height, pixelFormat: CVPixelBufferGetPixelFormatType(pixelBuffer)) else {
             return nil
         }
         let image = CIImage(cvPixelBuffer: pixelBuffer)
@@ -46,8 +48,8 @@ public final class MindGramRoundRenderer {
     }
 
     /// A camera frame for the on-screen circle: rotated upright, cropped to a square of `side` pixels.
-    public func previewImage(pixelBuffer: CVPixelBuffer, front: Bool, side: CGFloat, effect: MindGramRoundEffect) -> CGImage? {
-        var image = CIImage(cvPixelBuffer: pixelBuffer).oriented(front ? .leftMirrored : .right)
+    public func previewImage(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation, side: CGFloat, effect: MindGramRoundEffect) -> CGImage? {
+        var image = CIImage(cvPixelBuffer: pixelBuffer).oriented(orientation)
         image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
         let square = min(image.extent.width, image.extent.height)
         image = image.cropped(to: CGRect(x: (image.extent.width - square) / 2.0, y: (image.extent.height - square) / 2.0, width: square, height: square))
@@ -452,11 +454,12 @@ public final class MindGramRoundRenderer {
 
     // MARK: Buffers
 
-    private func makeBuffer(width: Int, height: Int) -> CVPixelBuffer? {
+    /// A buffer like the input (size and pixel format), so the camera can keep its format description.
+    private func makeBuffer(width: Int, height: Int, pixelFormat: OSType) -> CVPixelBuffer? {
         let size = CGSize(width: width, height: height)
-        if self.pool == nil || self.poolSize != size {
+        if self.pool == nil || self.poolSize != size || self.poolFormat != pixelFormat {
             let attributes: [String: Any] = [
-                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                kCVPixelBufferPixelFormatTypeKey as String: pixelFormat,
                 kCVPixelBufferWidthKey as String: width,
                 kCVPixelBufferHeightKey as String: height,
                 kCVPixelBufferMetalCompatibilityKey as String: true,
@@ -466,6 +469,7 @@ public final class MindGramRoundRenderer {
             CVPixelBufferPoolCreate(kCFAllocatorDefault, [kCVPixelBufferPoolMinimumBufferCountKey as String: 4] as CFDictionary, attributes as CFDictionary, &pool)
             self.pool = pool
             self.poolSize = size
+            self.poolFormat = pixelFormat
         }
         guard let pool = self.pool else {
             return nil
@@ -505,7 +509,13 @@ public extension MindGramRoundVideo {
     }
 
     /// Every camera frame while the round video camera runs (single camera only).
+    /// CameraNeo delivers sensor-oriented frames: rotate them upright (mirrored for the front camera).
     static func handleCameraFrame(_ pixelBuffer: CVPixelBuffer, front: Bool) {
+        self.handleCameraFrame(pixelBuffer, orientation: front ? .leftMirrored : .right)
+    }
+
+    /// Every camera frame while the round video camera is open, with the rotation that makes it upright.
+    static func handleCameraFrame(_ pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) {
         self.sinkLock.lock()
         guard let sink = self.sink else {
             self.sinkLock.unlock()
@@ -531,7 +541,7 @@ public extension MindGramRoundVideo {
         self.sinkLock.unlock()
 
         self.previewQueue.async {
-            let image = self.previewRenderer.previewImage(pixelBuffer: pixelBuffer, front: front, side: 400.0, effect: effect)
+            let image = self.previewRenderer.previewImage(pixelBuffer: pixelBuffer, orientation: orientation, side: 400.0, effect: effect)
             self.sinkLock.lock()
             self.previewBusy = false
             self.previewShowing = image != nil

@@ -9,9 +9,9 @@ import AccountContext
 import UndoUI
 import MindGramCore
 
-private let savedKinds: [MindGramChatKind] = [.privateChat, .group, .channel, .secretChat, .bot]
+let savedKinds: [MindGramChatKind] = [.privateChat, .group, .channel, .secretChat, .bot]
 
-private func kindTitle(_ kind: MindGramChatKind, _ strings: MindGramStrings) -> String {
+func kindTitle(_ kind: MindGramChatKind, _ strings: MindGramStrings) -> String {
     switch kind {
     case .privateChat:
         return strings.t("Личные чаты", "Private Chats")
@@ -26,7 +26,7 @@ private func kindTitle(_ kind: MindGramChatKind, _ strings: MindGramStrings) -> 
     }
 }
 
-private func kindMark(_ kind: MindGramChatKind) -> String {
+func kindMark(_ kind: MindGramChatKind) -> String {
     switch kind {
     case .privateChat:
         return "👤"
@@ -65,6 +65,7 @@ func mindGramDateString(_ timestamp: Int32) -> String {
 /// Удалённые и правки: saved deleted messages, how they look, their history, and edit history.
 func mindGramDeletedController(context: AccountContext) -> ViewController {
     var pushImpl: ((ViewController) -> Void)?
+    var presentUIKitImpl: ((UIViewController) -> Void)?
 
     let arguments = MindGramListArguments(toggle: { id, value in
         switch id {
@@ -92,6 +93,30 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
                     MindGramDeleted.mark = mark
                 }
             }))
+        case 24:
+            let alert = UIAlertController(title: strings.t("Цвет значка", "Mark Color"), message: strings.t("HEX (#FF3B30) или RGB (255,59,48). Пусто — цвет времени. Эмодзи 🗑 и 👻 iOS не перекрашивает.", "HEX (#FF3B30) or RGB (255,59,48). Empty: the time's color. iOS can't recolor 🗑 and 👻 emoji."), preferredStyle: .alert)
+            alert.addTextField { field in
+                field.text = MindGramDeleted.markColor
+                field.placeholder = "#FF3B30"
+                field.autocapitalizationType = .allCharacters
+            }
+            alert.addAction(UIAlertAction(title: strings.t("Отмена", "Cancel"), style: .cancel))
+            alert.addAction(UIAlertAction(title: strings.t("Сохранить", "Save"), style: .default, handler: { [weak alert] _ in
+                MindGramDeleted.markColor = alert?.textFields?.first?.text ?? ""
+            }))
+            presentUIKitImpl?(alert)
+        case 25:
+            pushImpl?(mindGramPickerController(context: context, title: strings.t("Размер значка", "Mark Size"), options: [70, 85, 100, 120, 140, 170, 200].map { ("\($0)", "\($0) %") }, selected: { "\(MindGramDeleted.markScalePercent)" }, select: { value in
+                if let value = Int(value) {
+                    MindGramDeleted.markScalePercent = value
+                }
+            }))
+        case 26:
+            pushImpl?(mindGramPickerController(context: context, title: strings.t("Прозрачность", "Opacity"), options: [100, 85, 70, 55, 40, 25].map { ("\($0)", "\($0) %") }, selected: { "\(MindGramDeleted.opacityPercent)" }, select: { value in
+                if let value = Int(value) {
+                    MindGramDeleted.opacityPercent = value
+                }
+            }))
         case 30:
             pushImpl?(mindGramDeletedHistoryController(context: context))
         default:
@@ -116,10 +141,13 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
                 if MindGramDeleted.mark != .word {
                     entries.append(.toggle(id: 23, section: 2, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом со значком", "A word next to the mark"), value: MindGramDeleted.showsWord))
                 }
+                entries.append(.value(id: 24, section: 2, title: strings.t("Цвет значка", "Mark Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor))
+                entries.append(.value(id: 25, section: 2, title: strings.t("Размер значка", "Mark Size"), value: "\(MindGramDeleted.markScalePercent) %"))
+                entries.append(.value(id: 26, section: 2, title: strings.t("Прозрачность сообщений", "Message Opacity"), value: "\(MindGramDeleted.opacityPercent) %"))
             }
         }
         entries.append(.value(id: 30, section: 3, title: strings.t("История удалённых", "Deleted History"), value: "\(MindGramDeleted.records.count)"))
-        entries.append(.footer(id: 31, section: 3, text: strings.t("Все сохранённые удалённые сообщения из всех чатов. Нажмите, чтобы открыть сообщение в чате.", "Every kept deleted message from every chat. Tap one to open it in its chat.")))
+        entries.append(.footer(id: 31, section: 3, text: strings.t("Все сохранённые удалённые сообщения из всех чатов, с аватаркой автора. Нажмите — профиль, сообщение в чате или копия текста.", "Every kept deleted message from every chat, with the author's avatar. Tap for the profile, the message in its chat, or a copy of the text.")))
 
         entries.append(.header(id: 40, section: 4, text: strings.t("ПРАВКИ", "EDITS")))
         entries.append(.toggle(id: 41, section: 4, title: strings.t("История правок", "Edit History"), info: strings.t("Прошлые версии сообщений", "Earlier versions of messages"), value: MindGramEdits.isEnabled))
@@ -129,103 +157,8 @@ func mindGramDeletedController(context: AccountContext) -> ViewController {
     pushImpl = { [weak controller] c in
         controller?.push(c)
     }
-    return controller
-}
-
-/// История удалённых: every kept deleted message, newest first, filtered by chat kind.
-private func mindGramDeletedHistoryController(context: AccountContext) -> ViewController {
-    var pushImpl: ((ViewController) -> Void)?
-    var presentImpl: ((ViewController) -> Void)?
-    var navigationImpl: (() -> NavigationController?)?
-    var kindFilter: MindGramChatKind?
-    let filterUpdated = ValuePromise<Int>(0, ignoreRepeated: true)
-    var filterRevision = 0
-    let maxShown = 300
-
-    let visibleRecords: () -> [MindGramDeleted.Record] = {
-        let records = MindGramDeleted.records
-        if let kindFilter {
-            return records.filter { $0.chatKind == kindFilter }
-        }
-        return records
-    }
-
-    let arguments = MindGramListArguments(open: { id in
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let strings = MindGramStrings(presentationData)
-        if id == 1 {
-            var options: [(id: String, title: String)] = [("all", strings.t("Все чаты", "All Chats"))]
-            options.append(contentsOf: savedKinds.map { ($0.rawValue, kindTitle($0, strings)) })
-            pushImpl?(mindGramPickerController(context: context, title: strings.t("Показывать", "Show"), options: options, selected: { kindFilter?.rawValue ?? "all" }, select: { value in
-                kindFilter = MindGramChatKind(rawValue: value)
-                NotificationCenter.default.post(name: MindGramSettings.didChangeNotification, object: nil)
-                filterRevision += 1
-                filterUpdated.set(filterRevision)
-            }))
-            return
-        }
-        if id == 1_000_000 {
-            MindGramDeleted.clear()
-            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.t("История очищена", "History cleared"), timeout: 2.0, customUndoText: nil), elevatedLayout: false, action: { _ in return false }))
-            return
-        }
-        let records = visibleRecords()
-        let index = Int(id) - 100
-        guard index >= 0, index < records.count else {
-            return
-        }
-        let record = records[index]
-        if !MindGramDeleted.showsInChat {
-            UIPasteboard.general.string = record.text
-            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.copiedText, timeout: 2.0, customUndoText: nil), elevatedLayout: false, action: { _ in return false }))
-            return
-        }
-        let peerId = EnginePeer.Id(record.key.peerId)
-        let messageId = EngineMessage.Id(peerId: peerId, namespace: record.key.namespace, id: record.key.id)
-        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-        |> deliverOnMainQueue).startStandalone(next: { peer in
-            guard let peer, let navigationController = navigationImpl?() else {
-                return
-            }
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always))
-        })
-    })
-
-    let controller = mindGramListController(context: context, title: { $0.t("История удалённых", "Deleted History") }, arguments: arguments, extraUpdates: filterUpdated.get() |> map { _ in Void() }, entries: { _, strings in
-        var entries: [MindGramListEntry] = []
-        entries.append(.value(id: 1, section: 0, title: strings.t("Показывать", "Show"), value: kindFilter.map { kindTitle($0, strings) } ?? strings.t("Все чаты", "All Chats")))
-        let records = visibleRecords()
-        if records.isEmpty {
-            entries.append(.footer(id: 3, section: 0, text: strings.t("Пока ничего не удалили. Включите «Сохранять удалённые», и удалённые сообщения появятся здесь.", "Nothing deleted yet. Turn on \"Keep Deleted Messages\" and deleted messages will appear here.")))
-        } else {
-            for (index, record) in records.prefix(maxShown).enumerated() {
-                var body = record.text
-                if !record.media.isEmpty {
-                    body = body.isEmpty ? "[\(record.media)]" : "[\(record.media)] \(body)"
-                }
-                if body.count > 160 {
-                    body = String(body.prefix(160)) + "…"
-                }
-                let author = record.isOutgoing ? strings.t("Вы", "You") : record.author
-                let line1 = author.isEmpty || author == record.chatTitle ? body : "\(author): \(body)"
-                let line2 = strings.t("Отправлено", "Sent") + " \(mindGramDateString(record.date)) · " + strings.t("удалено", "deleted") + " \(mindGramDateString(record.deletedAt))"
-                entries.append(.detail(id: 100 + Int32(index), section: 1, title: "\(kindMark(record.chatKind)) \(record.chatTitle)", detail: "\(line1)\n\(line2)"))
-            }
-            if records.count > maxShown {
-                entries.append(.footer(id: 100 + Int32(maxShown) + 1, section: 1, text: strings.t("Показаны последние \(maxShown) из \(records.count).", "Showing the last \(maxShown) of \(records.count).")))
-            }
-            entries.append(.action(id: 1_000_000, section: 2, title: strings.t("Очистить историю", "Clear History")))
-        }
-        return entries
-    })
-    pushImpl = { [weak controller] c in
-        controller?.push(c)
-    }
-    presentImpl = { [weak controller] c in
-        controller?.present(c, in: .current)
-    }
-    navigationImpl = { [weak controller] in
-        return controller?.navigationController as? NavigationController
+    presentUIKitImpl = { [weak controller] c in
+        controller?.present(c, animated: true)
     }
     return controller
 }

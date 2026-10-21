@@ -14,6 +14,7 @@ import PresentationDataUtils
 import Camera
 import CameraLegacy
 import CameraNeo
+import MindGramBleep
 import MultilineTextComponent
 import BlurredBackgroundComponent
 import PlainButtonComponent
@@ -1059,6 +1060,7 @@ public class VideoMessageCameraScreen: ViewController {
         // MindGram: round video effects (MindGram/RoundVideo).
         private let mindGramEffectView = UIImageView()
         private let mindGramEffectLabel = UILabel()
+        private var mindGramEffectsBar: MindGramRoundEffectsBar?
 
         @objc private func mindGramSwipe(_ recognizer: UISwipeGestureRecognizer) {
             guard self.previewState == nil else {
@@ -1074,6 +1076,7 @@ public class VideoMessageCameraScreen: ViewController {
                 self.mindGramEffectLabel.alpha = 0.0
             })
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            self.mindGramEffectsBar?.updateSelection(animated: true)
         }
         
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
@@ -1121,6 +1124,13 @@ public class VideoMessageCameraScreen: ViewController {
                 self.mindGramEffectView.image = image.map { UIImage(cgImage: $0) }
                 self.mindGramEffectView.isHidden = image == nil || self.previewState != nil
             })
+            if MindGramRoundVideo.isEnabled {
+                // The masks menu under the circle.
+                let languageCode = self.presentationData.strings.baseLanguageCode
+                let bar = MindGramRoundEffectsBar(isRussian: ["ru", "uk", "be"].contains(where: { languageCode.hasPrefix($0) }))
+                self.view.addSubview(bar)
+                self.mindGramEffectsBar = bar
+            }
             if MindGramRoundVideo.isEnabled && MindGramRoundVideo.swipeToSwitch {
                 for direction in [UISwipeGestureRecognizer.Direction.left, .right] {
                     let swipe = UISwipeGestureRecognizer(target: self, action: #selector(self.mindGramSwipe(_:)))
@@ -1649,6 +1659,12 @@ public class VideoMessageCameraScreen: ViewController {
                 self.mindGramEffectView.isHidden = true
             }
             self.mindGramEffectLabel.frame = CGRect(x: 0.0, y: previewBounds.height * 0.72, width: previewBounds.width, height: 24.0)
+            if let bar = self.mindGramEffectsBar {
+                let circleFrame = self.containerView.convert(previewFrame, to: self.view)
+                bar.frame = CGRect(x: 0.0, y: circleFrame.maxY + 14.0, width: layout.size.width, height: MindGramRoundEffectsBar.height)
+                bar.isHidden = self.previewState != nil
+                self.view.bringSubviewToFront(bar)
+            }
             
             transition.setAlpha(view: self.additionalPreviewView, alpha: self.cameraState.position == .front ? 1.0 : 0.0)
             
@@ -1940,6 +1956,10 @@ public class VideoMessageCameraScreen: ViewController {
     fileprivate var didSend = false
     fileprivate var lastActionTimestamp: Double?
     fileprivate var isSendingImmediately = false
+    // MindGram: «Запикивание мата» state for the current recording.
+    private var mindGramBleepDone = false
+    private var mindGramBleepChanged = false
+    
     public func sendVideoRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, repeatPeriod: Int32? = nil, messageEffect: ChatSendMessageEffect? = nil) {
         guard !self.didSend else {
             return
@@ -1984,10 +2004,31 @@ public class VideoMessageCameraScreen: ViewController {
                 return
             }
 
+            // MindGram: «Запикивание мата» — beep swear words in the recorded files, then send again.
+            if MindGramBleep.roundEnabled && !self.mindGramBleepDone {
+                self.mindGramBleepDone = true
+                let paths = results.compactMap { result -> String? in
+                    if case let .video(video) = result {
+                        return video.videoPath
+                    }
+                    return nil
+                }
+                MindGramBleep.processVideos(paths: paths, completion: { [weak self] changed in
+                    guard let self else {
+                        return
+                    }
+                    self.mindGramBleepChanged = changed
+                    self.didSend = false
+                    self.lastActionTimestamp = nil
+                    self.sendVideoRecording(silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, messageEffect: messageEffect)
+                })
+                return
+            }
+
             var videoPaths: [String] = []
             var duration: Double = 0.0
             
-            var hasAdjustments = results.count > 1
+            var hasAdjustments = results.count > 1 || self.mindGramBleepChanged
             for result in results {
                 if case let .video(video) = result {
                     videoPaths.append(video.videoPath)

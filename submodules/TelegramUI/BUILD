@@ -209,6 +209,8 @@ swift_library(
         "//submodules/ShareItems/Impl:ShareItemsImpl",
         "//submodules/SettingsUI:SettingsUI",
         "//MindGram:MindGramUI",
+        "//MindGram/FileTools:MindGramFileTools",
+        "//MindGram/Bleep:MindGramBleep",
         "//submodules/UrlHandling:UrlHandling",
         "//submodules/HexColor:HexColor",
         "//submodules/QrCode:QrCode",

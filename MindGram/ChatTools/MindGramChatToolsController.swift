@@ -8,6 +8,8 @@ import TelegramUIPreferences
 import ItemListUI
 import AccountContext
 import MindGramCore
+import MindGramBleep
+import MindGramFileTools
 
 private func languageOptions(_ strings: MindGramStrings, includeAppLanguage: Bool) -> [(id: String, title: String)] {
     var options: [(id: String, title: String)] = []
@@ -32,6 +34,7 @@ private func scopeTitle(_ scope: MindGramSelfDestruct.Scope, _ strings: MindGram
 /// Чат и перевод: translators and auto-translation, self-destructing messages, tap actions, transcription.
 func mindGramChatToolsController(context: AccountContext) -> ViewController {
     var pushImpl: ((ViewController) -> Void)?
+    var presentUIKitImpl: ((UIViewController) -> Void)?
     var showTranslateButton = false
 
     let translationSettings: Signal<Void, NoError> = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
@@ -74,6 +77,14 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
             MindGramForward.alwaysHideAuthor = value
         case 43:
             MindGramTranscription.translates = value
+        case 80:
+            MindGramBleep.voiceEnabled = value
+        case 81:
+            MindGramBleep.roundEnabled = value
+        case 82:
+            MindGramBleep.usesBeep = value
+        case 90:
+            MindGramFileTools.isEnabled = value
         case 41:
             MindGramTranscription.alwaysLocal = value
         default:
@@ -123,6 +134,17 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
                     MindGramSwipe.rightAction = action
                 }
             }))
+        case 83:
+            let alert = UIAlertController(title: strings.t("Свои слова", "Own Words"), message: strings.t("Через запятую. Слово запикается, если с него начинается сказанное.", "Comma-separated. A spoken word that starts with one is beeped."), preferredStyle: .alert)
+            alert.addTextField { field in
+                field.text = MindGramBleep.customWords
+                field.autocapitalizationType = .none
+            }
+            alert.addAction(UIAlertAction(title: strings.t("Отмена", "Cancel"), style: .cancel))
+            alert.addAction(UIAlertAction(title: strings.t("Сохранить", "Save"), style: .default, handler: { [weak alert] _ in
+                MindGramBleep.customWords = alert?.textFields?.first?.text ?? ""
+            }))
+            presentUIKitImpl?(alert)
         case 30, 31:
             let isDouble = id == 30
             let options: [(id: String, title: String)] = MindGramTapAction.allCases.map { ($0.rawValue, $0.title(isRussian: strings.isRussian)) }
@@ -196,8 +218,22 @@ func mindGramChatToolsController(context: AccountContext) -> ViewController {
         entries.append(.header(id: 69, section: 6, text: strings.t("ПЕРЕСЫЛКА", "FORWARDING")))
         entries.append(.toggle(id: 70, section: 6, title: strings.t("«Переслать без автора»", "\"Forward Without Author\""), info: strings.t("Пункт в меню сообщения", "An item in the message menu"), value: MindGramForward.showsMenuItem))
         entries.append(.toggle(id: 71, section: 6, title: strings.t("Всегда без автора", "Always Without Author"), info: strings.t("И для выбранных сообщений", "Also for selected messages"), value: MindGramForward.alwaysHideAuthor))
+
+        entries.append(.header(id: 79, section: 7, text: strings.t("ЗАПИКИВАНИЕ МАТА", "BLEEP SWEARING")))
+        entries.append(.toggle(id: 80, section: 7, title: strings.t("В голосовых", "In Voice Messages"), info: strings.t("Мат заменяется писком", "Swearing becomes a beep"), value: MindGramBleep.voiceEnabled))
+        entries.append(.toggle(id: 81, section: 7, title: strings.t("В кружках", "In Round Videos"), info: strings.t("Звук кружка без мата", "Round video sound without swearing"), value: MindGramBleep.roundEnabled))
+        entries.append(.toggle(id: 82, section: 7, title: strings.t("Писк", "Beep"), info: strings.t("Выкл. — тишина вместо писка", "Off: silence instead of a beep"), value: MindGramBleep.usesBeep))
+        entries.append(.value(id: 83, section: 7, title: strings.t("Свои слова", "Own Words"), value: MindGramBleep.customWords.isEmpty ? strings.t("нет", "none") : MindGramBleep.customWords))
+        entries.append(.footer(id: 84, section: 7, text: strings.t("Речь распознаётся на iPhone перед отправкой (1–3 с), найденные слова заменяются писком. Русский и английский мат уже в списке.", "Speech is recognized on the iPhone before sending (1–3 s) and the words found are beeped. Russian and English swearing is already listed.")))
+
+        entries.append(.header(id: 89, section: 8, text: strings.t("ФАЙЛЫ", "FILES")))
+        entries.append(.toggle(id: 90, section: 8, title: strings.t("Редактор файлов", "File Editor"), info: strings.t("Имя, формат, теги перед отправкой", "Name, format, tags before sending"), value: MindGramFileTools.isEnabled))
+        entries.append(.footer(id: 91, section: 8, text: strings.t("Файл из «Файлов» открывается в редакторе: переименовать, сменить расширение, изменить код (py, ts, js, mjs и ещё ~80 форматов), теги и обложку музыки, конвертировать звук (MP3, M4A, WAV, AIFF, CAF), видео и картинки.", "A file from Files opens in the editor: rename it, change its extension, edit code (py, ts, js, mjs and ~80 more), music tags and cover, convert audio (MP3, M4A, WAV, AIFF, CAF), video and images.")))
         return entries
     })
+    presentUIKitImpl = { [weak controller] c in
+        controller?.present(c, animated: true)
+    }
     pushImpl = { [weak controller] c in
         controller?.push(c)
     }

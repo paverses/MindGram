@@ -106,6 +106,7 @@ func mindGramFilterServerDeletions(transaction: Transaction, ids: [MessageId]) -
             chatKind: kind,
             chatTitle: chatTitle,
             author: message.author?.debugDisplayTitle ?? "",
+            authorId: message.author?.id.toInt64(),
             text: message.text,
             media: mindGramMediaSummary(message),
             isOutgoing: isOutgoing,

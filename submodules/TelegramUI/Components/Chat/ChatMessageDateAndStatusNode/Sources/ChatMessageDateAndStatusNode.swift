@@ -622,7 +622,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
             
             let dateFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
-            let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: updatedDateText, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: arguments.constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (date, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: mindGramDateAttributedString(updatedDateText, font: dateFont, color: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: arguments.constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let checkOffset = floor(arguments.presentationData.fontSize.baseDisplaySize * 6.0 / 17.0)
             
@@ -1553,4 +1553,28 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
 
 public func shouldDisplayInlineDateReactions(message: EngineMessage, isPremium: Bool, forceInline: Bool) -> Bool {
     return false
+}
+
+// MindGram: the color and size of the mark of a kept deleted message (Удалённые и правки).
+private func mindGramDateAttributedString(_ text: String, font: UIFont, color: UIColor) -> NSAttributedString {
+    let result = NSMutableAttributedString(string: text, attributes: [.font: font, .foregroundColor: color])
+    let customColor = MindGramDeleted.parsedMarkColor()
+    let scale = CGFloat(MindGramDeleted.markScalePercent) / 100.0
+    guard customColor != nil || scale != 1.0 else {
+        return result
+    }
+    for isRussian in [true, false] {
+        let prefix = MindGramDeleted.timestampPrefix(isRussian: isRussian)
+        if !prefix.isEmpty && text.hasPrefix(prefix) {
+            let range = NSRange(location: 0, length: (prefix as NSString).length)
+            if let customColor {
+                result.addAttribute(.foregroundColor, value: UIColor(red: customColor.red, green: customColor.green, blue: customColor.blue, alpha: 1.0), range: range)
+            }
+            if scale != 1.0 {
+                result.addAttribute(.font, value: font.withSize(font.pointSize * scale), range: range)
+            }
+            break
+        }
+    }
+    return result
 }

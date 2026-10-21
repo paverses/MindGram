@@ -119,6 +119,7 @@ import AudioWaveform
 import PeerNameColorScreen
 import ChatEmptyNode
 import ChatMediaInputStickerGridItem
+import MindGramBleep
 
 extension ChatControllerImpl {
     func requestAudioRecorder(beginWithTone: Bool, existingDraft: ChatInterfaceMediaDraftState.Audio? = nil) {
@@ -287,7 +288,7 @@ extension ChatControllerImpl {
                 
                 var resource: LocalFileMediaResource?
                 self.recorderDataDisposable.set(
-                    (audioRecorderValue.takenRecordedData()
+                    (audioRecorderValue.takenRecordedData() |> mapToSignal(mindGramBleepVoice)
                      |> deliverOnMainQueue).startStrict(
                         next: { [weak self] data in
                             if let strongSelf = self, let data = data {
@@ -342,7 +343,7 @@ extension ChatControllerImpl {
                 )
             case let .send(viewOnce):
                 self.chatDisplayNode.updateRecordedMediaDeleted(false)
-                self.recorderDataDisposable.set((audioRecorderValue.takenRecordedData()
+                self.recorderDataDisposable.set((audioRecorderValue.takenRecordedData() |> mapToSignal(mindGramBleepVoice)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] data in
                     if let strongSelf = self, let data = data {
                         if data.duration < 0.5 {
@@ -638,7 +639,7 @@ extension ChatControllerImpl {
                 
                 if !resuming {
                     self.recorderDataDisposable.set(
-                        (audioRecorder.takenRecordedData()
+                        (audioRecorder.takenRecordedData() |> mapToSignal(mindGramBleepVoice)
                          |> deliverOnMainQueue).startStrict(
                             next: { [weak self] data in
                                 if let strongSelf = self, let data = data {
@@ -768,5 +769,23 @@ extension ChatControllerImpl {
             }
             videoRecorderValue.sendVideoRecording(silentPosting: silentPosting, scheduleTime: scheduleTime, repeatPeriod: repeatPeriod, messageEffect: messageEffect)
         }
+    }
+}
+
+// MindGram: «Запикивание мата» — swear words in a recorded voice message are beeped before it is stored or sent.
+private func mindGramBleepVoice(_ data: RecordedAudioData?) -> Signal<RecordedAudioData?, NoError> {
+    guard let data, MindGramBleep.voiceEnabled else {
+        return .single(data)
+    }
+    return Signal { subscriber in
+        MindGramBleep.processVoice(data.compressedData, completion: { processed in
+            if let processed {
+                subscriber.putNext(RecordedAudioData(compressedData: processed, resumeData: nil, duration: data.duration, waveform: data.waveform, trimRange: data.trimRange))
+            } else {
+                subscriber.putNext(data)
+            }
+            subscriber.putCompletion()
+        })
+        return EmptyDisposable
     }
 }

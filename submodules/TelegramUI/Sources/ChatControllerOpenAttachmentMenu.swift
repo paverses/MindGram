@@ -42,6 +42,7 @@ import Postbox
 import WalletContext
 import WalletSendScreen
 import MindGramUI
+import MindGramFileTools
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -1398,7 +1399,7 @@ extension ChatControllerImpl {
             let (accountPeer, limits, premiumLimits) = result
             let isPremium = accountPeer?.isPremium ?? false
 
-            strongSelf.present(legacyICloudFilePicker(theme: strongSelf.presentationData.theme, hasMultiselection: !editingMessage, documentTypes: documentTypes, completion: { [weak self] urls in
+            let mindGramHandleURLs: ([URL]) -> Void = { [weak self] urls in
                 if let strongSelf = self, !urls.isEmpty {
                     var signals: [Signal<ICloudFileDescription?, NoError>] = []
                     for url in urls {
@@ -1498,6 +1499,29 @@ extension ChatControllerImpl {
                             }
                         }
                     }))
+                }
+            }
+
+            strongSelf.present(legacyICloudFilePicker(theme: strongSelf.presentationData.theme, hasMultiselection: !editingMessage, documentTypes: documentTypes, completion: { [weak self] urls in
+                // MindGram: the «Файл» editor (name, extension, tags, cover, conversion, code) before sending one file.
+                if let strongSelf = self, !editingMessage, urls.count == 1, MindGramFileTools.isEnabled {
+                    let presentationData = strongSelf.presentationData
+                    let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.baseLanguageCode.hasPrefix($0) })
+                    let editor = MindGramFileEditorController(url: urls[0], isRussian: isRussian, isDark: presentationData.theme.overallDarkAppearance, send: { url in
+                        mindGramHandleURLs([url])
+                    })
+                    // After the file picker has gone away, on top of whatever is presented.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: { [weak self] in
+                        guard var top = self?.view.window?.rootViewController else {
+                            return
+                        }
+                        while let presented = top.presentedViewController, !presented.isBeingDismissed {
+                            top = presented
+                        }
+                        top.present(editor, animated: true)
+                    })
+                } else {
+                    mindGramHandleURLs(urls)
                 }
             }), in: .window(.root))
         })

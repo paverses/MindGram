@@ -4000,6 +4000,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         strongSelf.contentContainersWrapperNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         
         strongSelf.appliedItem = item
+        // MindGram: kept deleted messages are drawn at the opacity chosen in «Удалённые и правки».
+        let mindGramMessageId = item.content.firstMessage.id
+        if MindGramDeleted.isDeleted(MindGramMessageKey(peerId: mindGramMessageId.peerId.toInt64(), namespace: mindGramMessageId.namespace, id: mindGramMessageId.id)) {
+            strongSelf.mainContextSourceNode.contentNode.alpha = CGFloat(MindGramDeleted.opacityPercent) / 100.0
+            strongSelf.mindGramDimmed = true
+        } else if strongSelf.mindGramDimmed {
+            strongSelf.mindGramDimmed = false
+            strongSelf.mainContextSourceNode.contentNode.alpha = 1.0
+        }
         strongSelf.appliedForwardInfo = ChatMessageAppliedForwardInfo(messageId: item.content.firstMessage.id, source: forwardSource, authorSignature: forwardAuthorSignature)
         strongSelf.updateAccessibilityData(accessibilityData)
         strongSelf.disablesComments = disablesComments
@@ -5862,6 +5871,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     // MindGram: double and triple tap actions («Чат и перевод»).
     private var mindGramPendingDoubleTap: DispatchWorkItem?
     private var mindGramTripleTapActive = false
+    private var mindGramDimmed = false
 
     private func mindGramHandleTap(gesture: TapLongTapOrDoubleTapGesture, item: ChatMessageItem) -> Bool {
         if case .tap = gesture, self.mindGramTripleTapActive {

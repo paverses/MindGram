@@ -9,6 +9,8 @@ public enum MindGramDeleted {
         public let chatKind: MindGramChatKind
         public let chatTitle: String
         public let author: String
+        /// The author's PeerId.toInt64(), for the avatar and the profile; nil in records from older builds.
+        public let authorId: Int64?
         public let text: String
         /// "Фото", "Голосовое"... for messages with media, empty otherwise.
         public let media: String
@@ -18,11 +20,12 @@ public enum MindGramDeleted {
         /// When MindGram saw it deleted (unix time).
         public let deletedAt: Int32
 
-        public init(key: MindGramMessageKey, chatKind: MindGramChatKind, chatTitle: String, author: String, text: String, media: String, isOutgoing: Bool, date: Int32, deletedAt: Int32) {
+        public init(key: MindGramMessageKey, chatKind: MindGramChatKind, chatTitle: String, author: String, authorId: Int64?, text: String, media: String, isOutgoing: Bool, date: Int32, deletedAt: Int32) {
             self.key = key
             self.chatKind = chatKind
             self.chatTitle = chatTitle
             self.author = author
+            self.authorId = authorId
             self.text = text
             self.media = media
             self.isOutgoing = isOutgoing
@@ -63,7 +66,7 @@ public enum MindGramDeleted {
     // MARK: Settings
 
     public static var isEnabled: Bool {
-        get { return MindGramDefaults.bool("MindGram.deleted.enabled", default: false) }
+        get { return MindGramDefaults.bool("MindGram.deleted.enabled", default: true) }
         set { MindGramDefaults.setBool("MindGram.deleted.enabled", newValue) }
     }
 
@@ -96,6 +99,45 @@ public enum MindGramDeleted {
     public static var showsWord: Bool {
         get { return MindGramDefaults.bool("MindGram.deleted.word", default: false) }
         set { MindGramDefaults.setBool("MindGram.deleted.word", newValue) }
+    }
+
+    /// Color of the mark (and "удалено"): "#FF3B30", "FF3B30" or "255,59,48"; empty means the time's own color.
+    /// Emoji marks (🗑 👻) keep their colors — iOS can't tint emoji.
+    public static var markColor: String {
+        get { return MindGramDefaults.string("MindGram.deleted.markColor", default: "") }
+        set { MindGramDefaults.setString("MindGram.deleted.markColor", newValue) }
+    }
+
+    /// Size of the mark relative to the time, percent (70–200).
+    public static var markScalePercent: Int {
+        get { return max(70, min(200, MindGramDefaults.int("MindGram.deleted.markScale", default: 100))) }
+        set { MindGramDefaults.setInt("MindGram.deleted.markScale", newValue) }
+    }
+
+    /// Opacity of a kept deleted message in the chat, percent (20–100).
+    public static var opacityPercent: Int {
+        get { return max(20, min(100, MindGramDefaults.int("MindGram.deleted.opacity", default: 100))) }
+        set { MindGramDefaults.setInt("MindGram.deleted.opacity", newValue) }
+    }
+
+    /// RGB components 0...1 of `markColor`, nil when it is empty or unreadable.
+    public static func parsedMarkColor() -> (red: Double, green: Double, blue: Double)? {
+        let text = self.markColor.trimmingCharacters(in: .whitespaces)
+        if text.isEmpty {
+            return nil
+        }
+        let parts = text.components(separatedBy: CharacterSet(charactersIn: ",; ")).filter { !$0.isEmpty }
+        if parts.count == 3, let r = Double(parts[0]), let g = Double(parts[1]), let b = Double(parts[2]) {
+            return (min(255.0, r) / 255.0, min(255.0, g) / 255.0, min(255.0, b) / 255.0)
+        }
+        var hex = text.replacingOccurrences(of: "#", with: "")
+        if hex.count == 3 {
+            hex = hex.map { "\($0)\($0)" }.joined()
+        }
+        guard hex.count == 6, let value = UInt32(hex, radix: 16) else {
+            return nil
+        }
+        return (Double((value >> 16) & 0xFF) / 255.0, Double((value >> 8) & 0xFF) / 255.0, Double(value & 0xFF) / 255.0)
     }
 
     // MARK: Store
@@ -198,7 +240,7 @@ public enum MindGramEdits {
     private static let maxEntries = 3000
 
     public static var isEnabled: Bool {
-        get { return MindGramDefaults.bool("MindGram.edits.enabled", default: false) }
+        get { return MindGramDefaults.bool("MindGram.edits.enabled", default: true) }
         set { MindGramDefaults.setBool("MindGram.edits.enabled", newValue) }
     }
 

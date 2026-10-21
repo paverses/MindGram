@@ -555,9 +555,12 @@ final class CameraOutput: NSObject {
             filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 4)
         }
 
-        guard let newPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, additional: additional, captureOrientation: self.captureOrientation, transitionFactor: transitionFactor) else {
+        guard let renderedPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, additional: additional, captureOrientation: self.captureOrientation, transitionFactor: transitionFactor) else {
             return nil
         }
+        
+        // MindGram: the round video effect (Кружки) in the recorded video.
+        let newPixelBuffer = MindGramRoundVideo.processRecordedFrame(renderedPixelBuffer)
         
         var sampleTimingInfo: CMSampleTimingInfo = .invalid
         CMSampleBufferGetSampleTimingInfo(sampleBuffer, at: 0, timingInfoOut: &sampleTimingInfo)
@@ -611,6 +614,13 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         }
         
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+            // MindGram: the live circle with the round video effect (Кружки).
+            let mindGramFront = connection.inputPorts.first?.sourceDevicePosition == .front
+            if connection.videoOrientation == .portrait {
+                MindGramRoundVideo.handleCameraFrame(videoPixelBuffer, orientation: mindGramFront && !connection.isVideoMirrored ? .upMirrored : .up)
+            } else {
+                MindGramRoundVideo.handleCameraFrame(videoPixelBuffer, orientation: mindGramFront ? .leftMirrored : .right)
+            }
             self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
         } else if sampleBuffer.type == kCMMediaType_Audio {
             self.processAudioBuffer?(sampleBuffer)
