@@ -56,9 +56,10 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
             if let parsed = MindGramDeleted.parsedMarkColor() {
                 picker.selectedColor = UIColor(red: CGFloat(parsed.red), green: CGFloat(parsed.green), blue: CGFloat(parsed.blue), alpha: 1.0)
             }
-            picker.delegate = MindGramColorPickerDelegate(changed: { color in
+            let pickerDelegate = MindGramColorPickerDelegate(changed: { color in
                 MindGramDeleted.markColor = mindGramHex(color)
             })
+            picker.delegate = pickerDelegate
             presentUIKitImpl?(picker)
         case 11:
             MindGramDeleted.markColor = ""
@@ -70,13 +71,13 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
         let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
         switch key {
         case "size":
-            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Размер корзины", "Trash Size"), percent: MindGramDeleted.markScalePercent, range: 70 ... 200, updated: { value in
+            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Размер корзины", "Trash Size"), value: MindGramDeleted.markScalePercent, onChange: { value in
                 if value != MindGramDeleted.markScalePercent {
                     MindGramDeleted.markScalePercent = value
                 }
             })), sectionId: section)
         case "opacity":
-            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Прозрачность сообщений", "Message Opacity"), percent: MindGramDeleted.opacityPercent, range: 20 ... 100, updated: { value in
+            return MindGramComponentItem(theme: theme, height: 92.0, component: AnyComponent(MindGramPercentSliderComponent(theme: theme, title: strings.t("Прозрачность сообщения", "Message Opacity"), value: MindGramDeleted.opacityPercent, onChange: { value in
                 if value != MindGramDeleted.opacityPercent {
                     MindGramDeleted.opacityPercent = value
                 }
@@ -96,10 +97,10 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
         var entries: [MindGramListEntry] = []
         entries.append(.header(id: -11, section: -1, text: strings.t("ПРЕВЬЮ", "PREVIEW")))
         entries.append(.custom(id: -10, section: -1, key: "preview", revision: revision.finalize()))
-        entries.append(.toggle(id: 1, section: 0, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord))
+        entries.append(.toggle(id: 1, section: 0, title: strings.t("Подпись «удалено»", "\"Deleted\" Label"), info: strings.t("Слово рядом с корзиной", "A word next to the trash"), value: MindGramDeleted.showsWord, revision: revision.finalize()))
 
         entries.append(.header(id: 9, section: 1, text: strings.t("КОРЗИНА", "TRASH")))
-        entries.append(.value(id: 10, section: 1, title: strings.t("Цвет корзины", "Trash Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor))
+        entries.append(.value(id: 10, section: 1, title: strings.t("Цвет корзины", "Trash Color"), value: MindGramDeleted.markColor.isEmpty ? strings.t("как время", "like the time") : MindGramDeleted.markColor, revision: revision.finalize()))
         if !MindGramDeleted.markColor.isEmpty {
             entries.append(.action(id: 11, section: 1, title: strings.t("Цвет как у времени", "Same as the Time")))
         }
@@ -107,7 +108,7 @@ func mindGramDeletedLookController(context: AccountContext) -> ViewController {
 
         entries.append(.header(id: 19, section: 2, text: strings.t("СООБЩЕНИЕ", "MESSAGE")))
         entries.append(.custom(id: 20, section: 2, key: "opacity", revision: MindGramDeleted.opacityPercent))
-        entries.append(.footer(id: 21, section: 2, text: strings.t("Цвет выбирается в палитре iOS: сетка, спектр или ползунки, и пипетка. Превью сверху меняется сразу.", "The colour comes from the iOS palette: grid, spectrum or sliders, and the eyedropper. The preview above changes at once.")))
+        entries.append(.footer(id: 21, section: 2, text: strings.t("Цвет выбирается в палитре iOS: сетка, спектр или ползунки, и пипетка. Применяется сразу, как только вы меняете цвет.", "The color is chosen in the iOS palette: grid, spectrum or sliders, and a picker. It applies immediately as you change it.")))
         return entries
     })
     presentUIKitImpl = { [weak controller] c in
