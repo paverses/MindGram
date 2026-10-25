@@ -1268,7 +1268,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 title = "" //"\u{00A0}"
             }
             if title.isEmpty {
-                if case let .user(user) = peer, let phone = user.phone {
+                if case let .user(user) = peer, let phone = MindGramVisual.phone(peerId: user.id.id._internalGetInt64Value()) ?? user.phone {
                     title = formatPhoneNumber(context: self.context, number: phone)
                 } else if let addressName = peer.addressName {
                     title = "@\(addressName)"
@@ -1282,7 +1282,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
             
             if self.isSettings, case let .user(user) = peer {
-                var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
+                var subtitle = formatPhoneNumber(context: self.context, number: MindGramVisual.phone(peerId: user.id.id._internalGetInt64Value()) ?? user.phone ?? "")
                 // MindGram: "Скрыть номер телефона" also hides it in the Settings header.
                 let hidePhone = MindGramSettings.isOn(.hidePhoneNumber)
                 if hidePhone {
@@ -1430,6 +1430,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             self.currentStarRating = nil
             self.currentPendingStarRating = nil
+        }
+        if let peer, case let .user(user) = peer {
+            let visual = MindGramVisual.values(peerId: user.id.id._internalGetInt64Value())
+            if visual.hasRating {
+                let level = visual.ratingLevel ?? 1
+                let points = visual.ratingPoints ?? 0
+                if level < 0 || points < 0 {
+                    self.currentStarRating = TelegramStarRating(level: min(level, -1), currentLevelStars: -1, stars: min(points, -1), nextLevelStars: 0)
+                } else {
+                    let next = max(visual.ratingNextPoints ?? max(points * 2, 100), points + 1)
+                    self.currentStarRating = TelegramStarRating(level: level, currentLevelStars: 0, stars: points, nextLevelStars: next)
+                }
+                self.currentPendingStarRating = nil
+            }
         }
 
         #if DEBUG && false

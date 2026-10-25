@@ -192,7 +192,7 @@ func infoItems(
             ))
         }
         
-        if let phone = user.phone, !MindGramSettings.isOn(.hidePhoneNumber) {
+        if let phone = MindGramVisual.phone(peerId: user.id.id._internalGetInt64Value()) ?? user.phone, !MindGramSettings.isOn(.hidePhoneNumber) {
             let formattedPhone = formatPhoneNumber(context: context, number: phone)
             let label: String
             if formattedPhone.hasPrefix("+888 ") {

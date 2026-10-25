@@ -52,6 +52,7 @@ swift_library(
         "//submodules/ItemListPeerItem:ItemListPeerItem",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/PromptUI",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",

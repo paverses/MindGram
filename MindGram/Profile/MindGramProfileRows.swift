@@ -28,6 +28,16 @@ public func mindGramProfileRows(peer: EnginePeer, accountPeerId: EnginePeer.Id, 
         rows.append(MindGramProfileRow(key: "beta", label: strings.t("Статус MindGram", "MindGram Status"), value: "Beta Tester", copyValue: nil))
     }
 
+    if peer.id != accountPeerId {
+        let visual = MindGramVisual.values(peerId: peer.id.id._internalGetInt64Value())
+        if let stars = visual.stars {
+            rows.append(MindGramProfileRow(key: "stars", label: strings.t("Звёзды", "Stars"), value: stars, copyValue: stars))
+        }
+        if let gram = visual.gram {
+            rows.append(MindGramProfileRow(key: "gram", label: "GRAM", value: gram, copyValue: gram))
+        }
+    }
+
     if let mark = MindGramMarks.mark(peerId: peer.id.id._internalGetInt64Value()) {
         rows.append(MindGramProfileRow(key: "mark", label: strings.t("Метка", "Mark"), value: mark.confirmedText(isRussian: strings.isRussian), copyValue: nil))
     }

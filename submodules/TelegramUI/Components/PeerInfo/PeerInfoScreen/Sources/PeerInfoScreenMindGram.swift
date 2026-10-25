@@ -48,6 +48,16 @@ extension PeerInfoScreenNode {
                 f(.dismissWithoutContent)
                 self?.mindGramEditVisualAbout(peer: peer)
             })))
+            if case .user = peer {
+                subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Визуал" : "Visual", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    guard let self else {
+                        return
+                    }
+                    c?.pushItems(items: .single(ContextController.Items(content: .list(self.mindGramVisualItems(peer: peer, backTitle: backTitle)))))
+                })))
+            }
             subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Метка" : "Mark", icon: { theme in
                 return generateTintedImage(image: MindGramMarks.image(.mind, size: 24.0), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
@@ -98,6 +108,30 @@ extension PeerInfoScreenNode {
             }
             MindGramVisualProfile.setAbout(peerId: peerId, value)
         }), in: .window(.root))
+    }
+
+    func mindGramVisualItems(peer: EnginePeer, backTitle: String) -> [ContextMenuItem] {
+        let isRussian = self.mindGramIsRussian
+        let peerId = peer.id.id._internalGetInt64Value()
+        var items: [ContextMenuItem] = []
+        items.append(.action(ContextMenuActionItem(text: backTitle, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+        }, iconPosition: .left, action: { c, _ in
+            c?.popItems()
+        })))
+        items.append(.separator)
+        for field in [MindGramVisualField.phone, .stars, .gram, .ratingLevel, .ratingPoints, .ratingNext] {
+            items.append(.action(ContextMenuActionItem(text: field.title(isRussian: isRussian), icon: { _ in
+                return nil
+            }, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                guard let self else {
+                    return
+                }
+                self.controller?.present(mindGramVisualPromptController(context: self.context, peerId: peerId, field: field), in: .window(.root))
+            })))
+        }
+        return items
     }
 
     func mindGramMarkItems(peer: EnginePeer, backTitle: String) -> [ContextMenuItem] {

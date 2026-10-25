@@ -89,7 +89,7 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
                 interaction.openSettings(.premiumManagement)
             }))
         } else if settings.suggestPhoneNumberConfirmation, case let .user(peer) = data.peer {
-            let phoneNumber = formatPhoneNumber(context: context, number: peer.phone ?? "")
+            let phoneNumber = formatPhoneNumber(context: context, number: MindGramVisual.phone(peerId: peer.id.id._internalGetInt64Value()) ?? peer.phone ?? "")
             items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).string, text: .markdown(presentationData.strings.Settings_CheckPhoneNumberText), linkAction: { link in
                 if case .tap = link {
                     interaction.openFaq(presentationData.strings.Settings_CheckPhoneNumberFAQAnchor)
@@ -288,10 +288,16 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
             interaction.openSettings(.premium)
         }))
     }
+    let mindGramVisual = MindGramVisual.values(peerId: context.account.peerId.id._internalGetInt64Value())
+    let mindGramLabel: (String) -> NSAttributedString = { text in
+        return NSAttributedString(string: text, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+    }
     if let starsState = data.starsState {
-        if !isPremiumDisabled || abs(starsState.balance.value) > 0 {
+        if !isPremiumDisabled || abs(starsState.balance.value) > 0 || mindGramVisual.stars != nil {
             let balanceText: NSAttributedString
-            if abs(starsState.balance.value) > 0 {
+            if let stars = mindGramVisual.stars {
+                balanceText = mindGramLabel(stars)
+            } else if abs(starsState.balance.value) > 0 {
                 let formattedLabel = formatStarsAmountText(starsState.balance, dateTimeFormat: presentationData.dateTimeFormat)
                 let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
                 let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
@@ -306,9 +312,11 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }
     }
     if let tonState = data.tonState {
-        if abs(tonState.balance.value) > 0 {
+        if abs(tonState.balance.value) > 0 || mindGramVisual.gram != nil {
             let balanceText: NSAttributedString
-            if abs(tonState.balance.value) > 0 {
+            if let gram = mindGramVisual.gram {
+                balanceText = mindGramLabel(gram)
+            } else if abs(tonState.balance.value) > 0 {
                 let formattedLabel = formatTonAmountText(tonState.balance.value, dateTimeFormat: presentationData.dateTimeFormat)
                 let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
                 let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
