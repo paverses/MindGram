@@ -85,8 +85,8 @@ func mindGramAdminController(context: AccountContext) -> ViewController {
         let actionSheet = ActionSheetController(presentationData: presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetTextItem(title: "\(member.name ?? "—") · \(member.id)"))
-        let item: (String, ActionSheetButtonColor, String, String, (inout MindGramBetaTesters.Palette) -> Void) -> ActionSheetButtonItem = { title, color, command, done, apply in
-            return ActionSheetButtonItem(title: title, color: color, action: { [weak actionSheet] in
+        let item: (String, ActionSheetButtonColor, String, String, (inout MindGramBetaTesters.Palette) -> Void) -> ActionSheetButtonItem = { [weak actionSheet] title, color, command, done, apply in
+            return ActionSheetButtonItem(title: title, color: color, action: {
                 actionSheet?.dismissAnimated()
                 MindGramBetaTesters.applyLocally(apply)
                 sendCommand(command, done)
