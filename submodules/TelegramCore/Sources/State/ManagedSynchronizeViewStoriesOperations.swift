@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MindGramGhost
-import TelegramApi
+internal import TelegramApi
 import MtProtoKit
 
 private final class ManagedSynchronizeViewStoriesOperationsHelper {
