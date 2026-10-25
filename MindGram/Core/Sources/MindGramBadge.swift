@@ -114,14 +114,11 @@ public enum MindGramBadge {
             let textSize = text.size()
             let logoHeight: CGFloat = 16.0
             let logoSize = CGSize(width: logoHeight * MindGramLogo.aspectRatio, height: logoHeight)
-            let spacing: CGFloat = 1.5
+            let spacing: CGFloat = 4.5
             let totalWidth = logoSize.width + spacing + textSize.width
             let originX = floor((size.width - totalWidth) / 2.0)
 
             cg.saveGState()
-            if let colors {
-                cg.setShadow(offset: .zero, blur: 6.0, color: colors.glow.cgColor)
-            }
             UIColor.white.setFill()
             MindGramLogo.path(in: CGRect(x: originX, y: floor((size.height - logoSize.height) / 2.0), width: logoSize.width, height: logoSize.height)).fill()
             text.draw(at: CGPoint(x: originX + logoSize.width + spacing, y: floor((size.height - textSize.height) / 2.0)))
