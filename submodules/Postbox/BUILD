@@ -7,6 +7,7 @@ load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl
 package_group(
     name = "clients",
     packages = [
+        "//MindGram",
         "//Telegram",
         "//Telegram/NotificationService",
         "//submodules/AccountContext",
