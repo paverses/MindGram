@@ -20,7 +20,7 @@ from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ChatAction, ChatType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyParameters
+from aiogram.types import CallbackQuery, ChatMemberUpdated, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyParameters
 
 import store
 
@@ -33,6 +33,7 @@ ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_IDS", "8690187164,1318539187"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "paverses/MindGram")
 GITHUB_PATH = os.environ.get("GITHUB_PATH", "MindGram/Bot/palette.json")
+PAID_CHANNEL_ID = int(os.environ.get("PAID_CHANNEL_ID", "0"))
 
 PAGE_SIZE = 8
 START_TEXT = "Тут ниже твои сборки MindGram"
@@ -215,6 +216,27 @@ async def remove_beta(message: Message) -> None:
     await message.answer(f"<code>{user_id}</code> убран из бета-тестеров. {await publish_beta()}")
 
 
+@dp.chat_member()
+async def paid_channel_member(update: ChatMemberUpdated) -> None:
+    if PAID_CHANNEL_ID and update.chat.id != PAID_CHANNEL_ID:
+        return
+    user = update.new_chat_member.user
+    if user.is_bot:
+        return
+    joined = update.new_chat_member.status in ("member", "administrator", "creator", "restricted")
+    was_member = update.old_chat_member.status in ("member", "administrator", "creator", "restricted")
+    if joined == was_member:
+        return
+    note = f"@{user.username}" if user.username else user.full_name
+    store.set_beta(user.id, joined, note)
+    result = await publish_beta()
+    for admin_id in ADMIN_IDS:
+        try:
+            await update.bot.send_message(admin_id, f"{'Купил бету' if joined else 'Подписка закончилась'}: <code>{user.id}</code> {html.escape(note)}. {result}")
+        except Exception:
+            pass
+
+
 @dp.message(Command("block"))
 async def block_user(message: Message) -> None:
     if message.from_user.id not in ADMIN_IDS:
@@ -279,7 +301,7 @@ async def main() -> None:
     session = AiohttpSession(api=TelegramAPIServer.from_base(API_SERVER, is_local=True), timeout=900)
     bot = Bot(BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode="HTML"))
     await bot.delete_my_commands()
-    await dp.start_polling(bot, allowed_updates=["message", "callback_query"])
+    await dp.start_polling(bot, allowed_updates=["message", "callback_query", "chat_member"])
 
 
 if __name__ == "__main__":
