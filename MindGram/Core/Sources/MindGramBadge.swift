@@ -98,11 +98,6 @@ public enum MindGramBadge {
                     cg.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: pillRect.minY), end: CGPoint(x: 0.0, y: pillRect.maxY), options: [])
                 }
                 cg.restoreGState()
-                cg.saveGState()
-                colors.glow.withAlphaComponent(0.85).setStroke()
-                pill.lineWidth = 1.5
-                pill.stroke()
-                cg.restoreGState()
             } else {
                 UIColor.black.setFill()
                 pill.fill()
