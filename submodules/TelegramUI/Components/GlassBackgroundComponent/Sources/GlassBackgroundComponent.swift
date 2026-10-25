@@ -668,8 +668,20 @@ public class GlassBackgroundView: UIView {
         return nil
     }
     
+    public static func mindGramClassicCornerRadius(size: CGSize, cornerRadius: CGFloat) -> CGFloat {
+        guard MindGramDesign.isClassic else {
+            return cornerRadius
+        }
+        let minSide = min(size.width, size.height)
+        let maxSide = max(size.width, size.height)
+        if minSide > 0.0 && maxSide > minSide * 1.3 && cornerRadius >= minSide * 0.5 - 1.0 {
+            return min(cornerRadius, 10.0)
+        }
+        return cornerRadius
+    }
+
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
-        let shape: Shape = .roundedRect(cornerRadius: cornerRadius)
+        let shape: Shape = .roundedRect(cornerRadius: GlassBackgroundView.mindGramClassicCornerRadius(size: size, cornerRadius: cornerRadius))
         self.update(size: size, shape: shape, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible, transition: transition)
     }
 

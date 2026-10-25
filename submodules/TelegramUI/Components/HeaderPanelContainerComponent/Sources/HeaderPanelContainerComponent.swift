@@ -127,7 +127,7 @@ public final class HeaderPanelContainerComponent: Component {
             self.component = component
             self.state = state
             
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = MindGramDesign.isClassic ? 0.0 : 16.0
             
             var size = CGSize(width: availableSize.width, height: 0.0)
             
@@ -262,6 +262,9 @@ public final class HeaderPanelContainerComponent: Component {
                 cornerRadius = backgroundFrame.height * 0.5
             } else {
                 cornerRadius = 20.0
+            }
+            if MindGramDesign.isClassic {
+                cornerRadius = 0.0
             }
             
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)

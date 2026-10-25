@@ -61,6 +61,10 @@ public class EdgeEffectView: UIView {
     }
     
     public func update(content: UIColor?, blur: Bool = false, alpha: CGFloat = 0.75, contentGradient: [GradientStop]? = nil, rect: CGRect, edge: Edge, edgeSize: CGFloat, transition: ComponentTransition) {
+        if MindGramDesign.isClassic {
+            self.isHidden = true
+            return
+        }
         #if DEBUG && false
         let content: UIColor = .blue
         //let blur: Bool = !"".isEmpty

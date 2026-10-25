@@ -2783,7 +2783,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let headerPanelsComponentView = self.headerPanelsView?.view, let headerPanelsSize {
-            sidePanelTopInset += 8.0
+            sidePanelTopInset += MindGramDesign.isClassic ? 0.0 : 8.0
             let headerPanelsFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: sidePanelTopInset), size: headerPanelsSize)
             var headerPanelsTransition = ComponentTransition(transition)
             if headerPanelsComponentView.superview == nil {
