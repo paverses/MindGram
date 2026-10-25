@@ -801,6 +801,7 @@ public final class NavigationBarComponent: Component {
                     isNewCapsule = true
                     leftButtonsBackgroundContainerTransition = leftButtonsBackgroundContainerTransition.withAnimation(.none)
                     leftButtonsBackgroundContainer = GlassContextExtractableContainer()
+                    leftButtonsBackgroundContainer.mindGramClassicFlat = true
                     self.leftButtonsBackgroundContainer = leftButtonsBackgroundContainer
                     self.addSubview(leftButtonsBackgroundContainer)
                     leftButtonsBackgroundContainer.contentView.addSubview(self.leftButtonsContainer)
@@ -933,6 +934,7 @@ public final class NavigationBarComponent: Component {
                     isNew = true
                     backgroundTransition = backgroundTransition.withAnimation(.none)
                     background = GlassContextExtractableContainer()
+                    background.mindGramClassicFlat = true
                     pill.background = background
                     self.addSubview(background)
                     background.contentView.addSubview(pill.itemsContainer)
@@ -1064,6 +1066,7 @@ public final class NavigationBarComponent: Component {
                 } else {
                     backTransition = backTransition.withAnimation(.none)
                     backBackgroundContainer = GlassContextExtractableContainer()
+                    backBackgroundContainer.mindGramClassicFlat = true
                     self.columnBackBackgroundContainer = backBackgroundContainer
                     self.sideColumnView.addSubview(backBackgroundContainer)
                     backBackgroundContainer.contentView.addSubview(self.columnBackContainer)
@@ -1119,6 +1122,7 @@ public final class NavigationBarComponent: Component {
                 } else {
                     capsuleTransition = capsuleTransition.withAnimation(.none)
                     capsuleBackgroundContainer = GlassContextExtractableContainer()
+                    capsuleBackgroundContainer.mindGramClassicFlat = true
                     self.columnButtonsBackgroundContainer = capsuleBackgroundContainer
                     self.sideColumnView.addSubview(capsuleBackgroundContainer)
                     capsuleBackgroundContainer.contentView.addSubview(self.columnButtonsContainer)
@@ -1164,6 +1168,7 @@ public final class NavigationBarComponent: Component {
                 } else {
                     trailingTransition = trailingTransition.withAnimation(.none)
                     trailingBackgroundContainer = GlassContextExtractableContainer()
+                    trailingBackgroundContainer.mindGramClassicFlat = true
                     self.columnTrailingBackgroundContainer = trailingBackgroundContainer
                     self.sideColumnView.addSubview(trailingBackgroundContainer)
                     trailingBackgroundContainer.contentView.addSubview(self.columnTrailingContainer)

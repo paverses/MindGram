@@ -11610,7 +11610,9 @@ private func mindGramStyledMessages(_ messages: [EnqueueMessage]) -> [EnqueueMes
             case .quote:
                 type = .BlockQuote(isCollapsed: false)
             }
-            entities.append(MessageTextEntity(range: range, type: type))
+            if !entities.contains(where: { $0.range == range && $0.type == type }) {
+                entities.append(MessageTextEntity(range: range, type: type))
+            }
         }
         if !entities.isEmpty {
             otherAttributes.append(TextEntitiesMessageAttribute(entities: entities))

@@ -204,6 +204,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private var textInputNodeLayout: (frame: CGRect, insets: UIEdgeInsets)?
     
     public let textInputBackgroundNode: ASImageNode
+    private var mindGramClassicFieldKey: String?
     public var textInputBackgroundTapRecognizer: TouchDownGestureRecognizer?
     public let mediaActionButtons: ChatTextInputActionButtonsNode
     public let sendActionButtons: ChatTextInputActionButtonsNode
@@ -3169,7 +3170,15 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.updateCounterTextNode(backgroundSize: textInputContainerBackgroundFrame.size, transition: transition)
         
         let textInputContainerBackgroundTransition = ComponentTransition(transition)
-        self.textInputContainerBackgroundView.update(size: textInputContainerBackgroundFrame.size, cornerRadius: floor(minimalInputHeight * 0.5), isDark: interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, transition: textInputContainerBackgroundTransition)
+        self.textInputContainerBackgroundView.update(size: textInputContainerBackgroundFrame.size, cornerRadius: floor(minimalInputHeight * 0.5), isDark: interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, isVisible: !MindGramDesign.isClassic, transition: textInputContainerBackgroundTransition)
+        if MindGramDesign.isClassic {
+            let inputPanelTheme = interfaceState.theme.chat.inputPanel
+            let classicKey = "\(minimalInputHeight)-\(inputPanelTheme.inputBackgroundColor.argb)-\(inputPanelTheme.inputStrokeColor.argb)"
+            if self.mindGramClassicFieldKey != classicKey {
+                self.mindGramClassicFieldKey = classicKey
+                self.textInputBackgroundNode.image = generateStretchableFilledCircleImage(diameter: minimalInputHeight, color: inputPanelTheme.inputBackgroundColor, strokeColor: inputPanelTheme.inputStrokeColor, strokeWidth: UIScreenPixel)
+            }
+        }
         
         transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: textInputContainerBackgroundFrame)
         transition.updateAlpha(node: self.textInputBackgroundNode, alpha: audioRecordingItemsAlpha)
@@ -3581,7 +3590,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
 
         let attachmentButtonFrame = CGRect(origin: CGPoint(x: attachmentButtonX, y: textInputFrame.maxY - attachmentPillHeight), size: CGSize(width: 40.0, height: attachmentPillHeight))
         attachmentButtonX += 40.0 + 6.0
-        self.attachmentButtonBackground.update(size: attachmentButtonFrame.size, cornerRadius: 40.0 * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, transition: ComponentTransition(transition))
+        self.attachmentButtonBackground.update(size: attachmentButtonFrame.size, cornerRadius: 40.0 * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, isVisible: !MindGramDesign.isClassic, transition: ComponentTransition(transition))
 
         transition.updateFrame(layer: self.attachmentButtonBackground.layer, frame: attachmentButtonFrame)
         // + tap target + disabled overlay + icon are pinned to the BOTTOM 40x40 slot of the capsule.
@@ -4026,10 +4035,75 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         parentController.present(tooltipController, in: .current)
     }
     
-    public func chatInputTextNodeDidUpdateText() {
-        if self.ignoreChatInputTextNodeDidUpdateText {
+    private var mindGramStylingText = false
+
+    private func mindGramApplyLiveTextStyle() {
+        guard !self.mindGramStylingText, MindGramTextStyle.isActive, let richTextInputNode = self.richTextInputNode, !richTextInputNode.usesNativeRichTextEngine, let textView = richTextInputNode.inputView as? UITextView, textView.markedTextRange == nil, let current = textView.attributedText, current.length > 0, !current.string.hasPrefix("/") else {
             return
         }
+        var hasCustomEmoji = false
+        current.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: current.length), options: []) { value, _, stop in
+            if value != nil {
+                hasCustomEmoji = true
+                stop.pointee = true
+            }
+        }
+        let mutable = NSMutableAttributedString(attributedString: current)
+        var selection = textView.selectedRange
+        var changed = false
+        let font = MindGramTextStyle.font
+        if font != .normal && !hasCustomEmoji {
+            let plain = current.string as NSString
+            let styled = MindGramTextStyle.apply(font: font, to: current.string)
+            if styled != current.string {
+                let prefix = plain.substring(to: min(selection.location, plain.length))
+                let location = (MindGramTextStyle.apply(font: font, to: prefix) as NSString).length
+                mutable.setAttributedString(NSAttributedString(string: styled, attributes: current.attributes(at: 0, effectiveRange: nil)))
+                selection = NSRange(location: min(location, mutable.length), length: 0)
+                changed = true
+            }
+        }
+        let formats = MindGramTextStyle.formats
+        if formats.count == 1, let format = formats.first {
+            let key: NSAttributedString.Key?
+            switch format {
+            case .bold:
+                key = ChatTextInputAttributes.bold
+            case .italic:
+                key = ChatTextInputAttributes.italic
+            case .underline:
+                key = ChatTextInputAttributes.underline
+            case .strikethrough:
+                key = ChatTextInputAttributes.strikethrough
+            case .monospace:
+                key = ChatTextInputAttributes.monospace
+            case .spoiler:
+                key = ChatTextInputAttributes.spoiler
+            case .quote:
+                key = nil
+            }
+            if let key {
+                let fullRange = NSRange(location: 0, length: mutable.length)
+                var effectiveRange = NSRange()
+                if mutable.attribute(key, at: 0, longestEffectiveRange: &effectiveRange, in: fullRange) == nil || effectiveRange != fullRange {
+                    mutable.addAttribute(key, value: true as NSNumber, range: fullRange)
+                    changed = true
+                }
+            }
+        }
+        if changed {
+            self.mindGramStylingText = true
+            textView.attributedText = mutable
+            textView.selectedRange = selection
+            self.mindGramStylingText = false
+        }
+    }
+
+    public func chatInputTextNodeDidUpdateText() {
+        if self.ignoreChatInputTextNodeDidUpdateText || self.mindGramStylingText {
+            return
+        }
+        self.mindGramApplyLiveTextStyle()
         if let richTextInputNode = self.richTextInputNode, let presentationInterfaceState = self.presentationInterfaceState, let context = self.context {
             let baseFontSize = chatTextInputBaseFontSize(for: presentationInterfaceState.fontSize)
             let fullTranslucency = self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true

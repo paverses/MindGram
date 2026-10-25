@@ -256,6 +256,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private let inputPanelOverlayNode: SparseNode
     private let inputPanelClippingNode: SparseNode
     let inputPanelBackgroundNode: NavigationBackgroundNode
+    private var mindGramInputPanelSeparatorNode: ASDisplayNode?
     
     private var intrinsicInputPanelBackgroundNodeSize: CGSize?
     private var inputPanelBottomBackgroundSeparatorBaseOffset: CGFloat = 0.0
@@ -2466,7 +2467,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var bottomBackgroundEdgeEffectNode: WallpaperEdgeEffectNode?
-        if self.historyNode.rotated && !isOverlay {
+        if self.historyNode.rotated && !isOverlay && !MindGramDesign.isClassic {
             if let current = self.bottomBackgroundEdgeEffectNode {
                 bottomBackgroundEdgeEffectNode = current
             } else {
@@ -2764,6 +2765,22 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         transition.updatePosition(node: self.inputPanelOverlayNode, position: CGRect(origin: apparentInputBackgroundFrame.origin, size: layout.size).center, beginWithCurrentState: true)
         transition.updateBounds(node: self.inputPanelOverlayNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y), size: layout.size), beginWithCurrentState: true)
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame, beginWithCurrentState: true)
+        if MindGramDesign.isClassic {
+            let inputPanelTheme = self.chatPresentationInterfaceState.theme.chat.inputPanel
+            self.inputPanelBackgroundNode.updateColor(color: inputPanelTheme.panelBackgroundColor, transition: .immediate)
+            let separatorNode: ASDisplayNode
+            if let current = self.mindGramInputPanelSeparatorNode {
+                separatorNode = current
+            } else {
+                separatorNode = ASDisplayNode()
+                separatorNode.isLayerBacked = true
+                self.inputPanelClippingNode.insertSubnode(separatorNode, aboveSubnode: self.inputPanelBackgroundNode)
+                self.mindGramInputPanelSeparatorNode = separatorNode
+            }
+            separatorNode.backgroundColor = inputPanelTheme.panelSeparatorColor
+            separatorNode.isHidden = apparentInputBackgroundFrame.height <= 0.0
+            transition.updateFrame(node: separatorNode, frame: CGRect(origin: apparentInputBackgroundFrame.origin, size: CGSize(width: apparentInputBackgroundFrame.width, height: UIScreenPixel)), beginWithCurrentState: true)
+        }
         
         if let headerPanelsComponentView = self.headerPanelsView?.view, let headerPanelsSize {
             sidePanelTopInset += 8.0

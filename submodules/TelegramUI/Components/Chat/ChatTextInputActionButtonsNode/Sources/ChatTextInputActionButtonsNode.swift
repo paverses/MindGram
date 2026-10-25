@@ -378,7 +378,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         // does not follow its view's alpha (the panel's fade-out leaves it on screen, under the translucent blob), so
         // it is dissolved through the glass itself.
         let isRecording = interfaceState.inputTextPanelState.mediaRecordingState != nil
-        self.micButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark:  interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, isVisible: !isRecording, transition: ComponentTransition(transition))
+        self.micButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark:  interfaceState.theme.overallDarkAppearance, tintColor: defaultGlassTintColor, isInteractive: true, isVisible: !isRecording && !MindGramDesign.isClassic, transition: ComponentTransition(transition))
         
         transition.updatePosition(layer: self.micButton.layer, position: CGRect(origin: CGPoint(), size: size).center)
         transition.updateBounds(layer: self.micButton.layer, bounds: CGRect(origin: CGPoint(), size: size))

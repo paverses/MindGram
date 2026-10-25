@@ -1839,8 +1839,10 @@ public final class GlassContextExtractableContainer: UIView, ContextExtractableC
         self.glassView.frame = self.glassFrameBeforeLending
     }
 
+    public var mindGramClassicFlat = false
+
     public func update(size: CGSize, cornerRadius: CGFloat, isDark: Bool, tintColor: GlassBackgroundView.TintColor, isInteractive: Bool = false, isVisible: Bool = true, transition: ComponentTransition) {
-        let normalParams = NormalParams(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible)
+        let normalParams = NormalParams(size: size, cornerRadius: cornerRadius, isDark: isDark, tintColor: tintColor, isInteractive: isInteractive, isVisible: isVisible && !(self.mindGramClassicFlat && MindGramDesign.isClassic))
         self.normalParams = normalParams
         
         if case .normal = self.state {

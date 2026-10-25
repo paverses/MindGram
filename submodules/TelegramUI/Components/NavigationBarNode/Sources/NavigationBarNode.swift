@@ -63,6 +63,9 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
     public let additionalContentNode: SparseNode
     public let customOverBackgroundContentView: UIView
     let edgeEffectViewImpl: EdgeEffectView
+    private var mindGramClassicBackground: UIVisualEffectView?
+    private var mindGramClassicTint: UIView?
+    private var mindGramClassicSeparator: UIView?
     private var backdropAlpha: CGFloat = 1.0
     private var edgeEffectExtension: CGFloat = 0.0
     private let glassContainer: GlassBackgroundContainerView
@@ -408,7 +411,41 @@ public final class NavigationBarNode: ASDisplayNode, NavigationBar, NavigationBa
         transition.updateFrame(view: self.rowHost, frame: glassContentBounds)
         transition.updateFrame(view: self.titleHost, frame: glassContentBounds)
 
-        if let edgeEffectColor = theme.edgeEffectColor, edgeEffectColor.alpha == 0.0 {
+        if MindGramDesign.isClassic {
+            self.edgeEffectViewImpl.isHidden = true
+            let isTransparent = theme.edgeEffectColor.flatMap { $0.alpha == 0.0 } ?? false
+            let background: UIVisualEffectView
+            let tint: UIView
+            let separator: UIView
+            if let current = self.mindGramClassicBackground, let currentTint = self.mindGramClassicTint, let currentSeparator = self.mindGramClassicSeparator {
+                background = current
+                tint = currentTint
+                separator = currentSeparator
+            } else {
+                background = UIVisualEffectView(effect: nil)
+                background.isUserInteractionEnabled = false
+                tint = UIView()
+                tint.isUserInteractionEnabled = false
+                separator = UIView()
+                separator.isUserInteractionEnabled = false
+                background.contentView.addSubview(tint)
+                self.backdropHost.insertSubview(background, at: 0)
+                self.backdropHost.addSubview(separator)
+                self.mindGramClassicBackground = background
+                self.mindGramClassicTint = tint
+                self.mindGramClassicSeparator = separator
+            }
+            background.effect = UIBlurEffect(style: theme.overallDarkAppearance ? .dark : .light)
+            tint.backgroundColor = (theme.edgeEffectColor ?? .white).withAlphaComponent(0.85)
+            separator.backgroundColor = theme.overallDarkAppearance ? UIColor(white: 1.0, alpha: 0.12) : UIColor(white: 0.0, alpha: 0.2)
+            background.isHidden = isTransparent
+            separator.isHidden = isTransparent
+            let backgroundHeight = size.height + layout.additionalBackgroundHeight
+            let classicFrame = CGRect(origin: CGPoint(x: 0.0, y: -200.0), size: CGSize(width: size.width, height: 200.0 + backgroundHeight))
+            transition.updateFrame(view: background, frame: classicFrame)
+            transition.updateFrame(view: tint, frame: CGRect(origin: CGPoint(), size: classicFrame.size))
+            transition.updateFrame(view: separator, frame: CGRect(origin: CGPoint(x: 0.0, y: backgroundHeight), size: CGSize(width: size.width, height: UIScreenPixel)))
+        } else if let edgeEffectColor = theme.edgeEffectColor, edgeEffectColor.alpha == 0.0 {
             self.edgeEffectViewImpl.isHidden = true
         } else {
             self.edgeEffectViewImpl.isHidden = false
