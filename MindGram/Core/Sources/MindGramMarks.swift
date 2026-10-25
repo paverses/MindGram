@@ -7,6 +7,8 @@ public enum MindGramMarks {
         case major
         case mind
 
+        public static let manualCases: [Kind] = [.hold, .major]
+
         public var title: String {
             switch self {
             case .hold:
@@ -26,11 +28,18 @@ public enum MindGramMarks {
     private static let key = "MindGram.marks"
     private static var cache: [String: UIImage] = [:]
 
-    public static func mark(peerId: Int64) -> Kind? {
-        guard let values = UserDefaults.standard.dictionary(forKey: self.key) as? [String: String], let raw = values["\(peerId)"] else {
+    public static func storedMark(peerId: Int64) -> Kind? {
+        guard let values = UserDefaults.standard.dictionary(forKey: self.key) as? [String: String], let raw = values["\(peerId)"], let kind = Kind(rawValue: raw), kind != .mind else {
             return nil
         }
-        return Kind(rawValue: raw)
+        return kind
+    }
+
+    public static func mark(peerId: Int64) -> Kind? {
+        if MindGramBetaTesters.isBetaTester(peerId) {
+            return .mind
+        }
+        return self.storedMark(peerId: peerId)
     }
 
     public static func setMark(peerId: Int64, _ kind: Kind?) {

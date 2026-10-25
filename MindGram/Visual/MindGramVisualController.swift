@@ -105,7 +105,7 @@ public func mindGramVisualPromptController(context: AccountContext, peerId: Int6
 
 func mindGramVisualController(context: AccountContext) -> ViewController {
     let accountPeerId = context.account.peerId.id._internalGetInt64Value()
-    let options: [MindGramMarks.Kind?] = [nil] + MindGramMarks.Kind.allCases.map { Optional($0) }
+    let options: [MindGramMarks.Kind?] = [nil] + MindGramMarks.Kind.manualCases.map { Optional($0) }
     var presentImpl: ((ViewController) -> Void)?
 
     let arguments = MindGramListArguments(open: { id in
@@ -131,11 +131,11 @@ func mindGramVisualController(context: AccountContext) -> ViewController {
             entries.append(.value(id: field.rawValue + 20, section: 1, title: field.title(isRussian: strings.isRussian), value: field.value(peerId: accountPeerId) ?? empty))
         }
         entries.append(.header(id: 49, section: 2, text: strings.t("МЕТКА", "MARK")))
-        let current = MindGramMarks.mark(peerId: accountPeerId)
+        let current = MindGramMarks.storedMark(peerId: accountPeerId)
         for (index, option) in options.enumerated() {
             entries.append(.check(id: 50 + Int32(index), section: 2, title: option?.title ?? strings.t("Без метки", "No Mark"), checked: option == current))
         }
-        entries.append(.footer(id: 70, section: 2, text: strings.t("Видно только вам. Другим людям — через их профиль: ⋯ → MindGram.", "Only you see it. For other people: their profile, ⋯ → MindGram.")))
+        entries.append(.footer(id: 70, section: 2, text: strings.t("Видно только вам. Mind ставится бета-тестерам автоматически.", "Only you see it. Beta testers get Mind automatically.")))
         return entries
     })
     presentImpl = { [weak controller] c in

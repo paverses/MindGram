@@ -137,7 +137,7 @@ extension PeerInfoScreenNode {
     func mindGramMarkItems(peer: EnginePeer, backTitle: String) -> [ContextMenuItem] {
         let isRussian = self.mindGramIsRussian
         let peerId = peer.id.id._internalGetInt64Value()
-        let current = MindGramMarks.mark(peerId: peerId)
+        let current = MindGramMarks.storedMark(peerId: peerId)
         var items: [ContextMenuItem] = []
         items.append(.action(ContextMenuActionItem(text: backTitle, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
@@ -145,7 +145,7 @@ extension PeerInfoScreenNode {
             c?.popItems()
         })))
         items.append(.separator)
-        let options: [MindGramMarks.Kind?] = [nil] + MindGramMarks.Kind.allCases.map { Optional($0) }
+        let options: [MindGramMarks.Kind?] = [nil] + MindGramMarks.Kind.manualCases.map { Optional($0) }
         for option in options {
             let title = option?.title ?? (isRussian ? "Без метки" : "No Mark")
             items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
