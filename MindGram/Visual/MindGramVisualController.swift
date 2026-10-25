@@ -37,6 +37,36 @@ public enum MindGramVisualField: Int32, CaseIterable {
         }
     }
 
+    var keyboardType: UIKeyboardType {
+        switch self {
+        case .phone:
+            return .phonePad
+        case .stars, .gram:
+            return .decimalPad
+        case .ratingLevel:
+            return .numbersAndPunctuation
+        case .ratingPoints, .ratingNext:
+            return .numberPad
+        case .about:
+            return .default
+        }
+    }
+
+    func filtered(_ text: String) -> String {
+        switch self {
+        case .phone:
+            return text.filter { $0.isNumber || $0 == "+" }
+        case .stars, .gram:
+            return text.replacingOccurrences(of: ",", with: ".").filter { $0.isNumber || $0 == "." }
+        case .ratingLevel:
+            return text.filter { $0.isNumber || $0 == "-" }
+        case .ratingPoints, .ratingNext:
+            return text.filter { $0.isNumber }
+        case .about:
+            return text
+        }
+    }
+
     func value(peerId: Int64) -> String? {
         let values = MindGramVisual.values(peerId: peerId)
         switch self {
@@ -58,7 +88,7 @@ public enum MindGramVisualField: Int32, CaseIterable {
     }
 
     func set(peerId: Int64, _ text: String?) {
-        let text = MindGramVisual.cleaned(text)
+        let text = MindGramVisual.cleaned(text.map { self.filtered($0) })
         if self == .about {
             MindGramVisualProfile.setAbout(peerId: peerId, text)
             return
@@ -66,7 +96,7 @@ public enum MindGramVisualField: Int32, CaseIterable {
         MindGramVisual.update(peerId: peerId, { values in
             switch self {
             case .phone:
-                values.phone = text.map { $0.filter { $0.isNumber || $0 == "+" } }.flatMap { $0.isEmpty ? nil : $0 }
+                values.phone = text
             case .stars:
                 values.stars = text
             case .gram:
@@ -95,7 +125,7 @@ public func mindGramVisualPromptController(context: AccountContext, peerId: Int6
     default:
         subtitle = strings.t("Видно только вам. Пусто — настоящее.", "Only you see it. Empty restores the real one.")
     }
-    return promptController(context: context, text: field.title(isRussian: strings.isRussian), subtitle: subtitle, value: field.value(peerId: peerId) ?? "", characterLimit: field == .about ? 1000 : 64, apply: { text in
+    return promptController(context: context, text: field.title(isRussian: strings.isRussian), subtitle: subtitle, value: field.value(peerId: peerId) ?? "", characterLimit: field == .about ? 1000 : 32, keyboardType: field.keyboardType, apply: { text in
         guard let text else {
             return
         }
@@ -103,8 +133,9 @@ public func mindGramVisualPromptController(context: AccountContext, peerId: Int6
     })
 }
 
-func mindGramVisualController(context: AccountContext) -> ViewController {
-    let accountPeerId = context.account.peerId.id._internalGetInt64Value()
+public func mindGramVisualController(context: AccountContext, peerId: Int64? = nil) -> ViewController {
+    let isSelf = peerId == nil || peerId == context.account.peerId.id._internalGetInt64Value()
+    let accountPeerId = peerId ?? context.account.peerId.id._internalGetInt64Value()
     let options: [MindGramMarks.Kind?] = [nil] + MindGramMarks.Kind.manualCases.map { Optional($0) }
     var presentImpl: ((ViewController) -> Void)?
 
@@ -123,7 +154,7 @@ func mindGramVisualController(context: AccountContext) -> ViewController {
         var entries: [MindGramListEntry] = []
         let empty = strings.t("Нет", "Off")
         entries.append(.header(id: 0, section: 0, text: strings.t("ПРОФИЛЬ", "PROFILE")))
-        for field in [MindGramVisualField.phone, .stars, .gram, .about] {
+        for field in isSelf ? [MindGramVisualField.phone, .stars, .gram, .about] : [MindGramVisualField.phone] {
             entries.append(.value(id: field.rawValue, section: 0, title: field.title(isRussian: strings.isRussian), value: field.value(peerId: accountPeerId).map { String($0.prefix(24)) } ?? empty))
         }
         entries.append(.header(id: 20, section: 1, text: strings.t("РЕЙТИНГ", "RATING")))
@@ -135,7 +166,7 @@ func mindGramVisualController(context: AccountContext) -> ViewController {
         for (index, option) in options.enumerated() {
             entries.append(.check(id: 50 + Int32(index), section: 2, title: option?.title ?? strings.t("Без метки", "No Mark"), checked: option == current))
         }
-        entries.append(.footer(id: 70, section: 2, text: strings.t("Видно только вам. Mind ставится бета-тестерам автоматически.", "Only you see it. Beta testers get Mind automatically.")))
+        entries.append(.footer(id: 70, section: 2, text: strings.t("Видно только вам. Mind есть только у бета-тестеров.", "Only you see it. Mind is for beta testers only.")))
         return entries
     })
     presentImpl = { [weak controller] c in

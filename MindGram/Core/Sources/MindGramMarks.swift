@@ -39,6 +39,9 @@ public enum MindGramMarks {
         if MindGramBetaTesters.isBetaTester(peerId) {
             return .mind
         }
+        if let raw = MindGramBetaTesters.remoteMark(peerId), let kind = Kind(rawValue: raw), kind != .mind {
+            return kind
+        }
         return self.storedMark(peerId: peerId)
     }
 

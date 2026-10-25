@@ -38,6 +38,72 @@ def add_user(user_id: int) -> None:
     _write(USERS_PATH, sorted(current))
 
 
+BETA_PATH = DATA_DIR / "beta.json"
+DOWNLOADS_PATH = DATA_DIR / "downloads.json"
+
+
+def beta() -> list[dict]:
+    return _read(BETA_PATH, [])
+
+
+def beta_ids() -> list[int]:
+    return sorted({item["id"] for item in beta()})
+
+
+def set_beta(user_id: int, enabled: bool, note: str = "") -> None:
+    items = [item for item in beta() if item["id"] != user_id]
+    if enabled:
+        items.append({"id": user_id, "note": note})
+    _write(BETA_PATH, sorted(items, key=lambda item: item["id"]))
+
+
+BLOCKED_PATH = DATA_DIR / "blocked.json"
+MARKS_PATH = DATA_DIR / "marks.json"
+
+
+def blocked() -> list[int]:
+    return sorted(set(_read(BLOCKED_PATH, [])))
+
+
+def set_blocked(user_id: int, value: bool) -> None:
+    current = set(blocked())
+    if value:
+        current.add(user_id)
+    else:
+        current.discard(user_id)
+    _write(BLOCKED_PATH, sorted(current))
+
+
+def marks() -> dict[str, str]:
+    return _read(MARKS_PATH, {})
+
+
+def set_mark(user_id: int, mark: str | None) -> None:
+    current = marks()
+    if mark:
+        current[str(user_id)] = mark
+    else:
+        current.pop(str(user_id), None)
+    _write(MARKS_PATH, current)
+
+
+def members() -> list[dict]:
+    latest: dict[int, dict] = {}
+    for item in downloads():
+        latest[item["id"]] = item
+    return [{"i": item["id"], "u": item.get("username"), "n": item.get("name"), "b": item.get("build"), "t": item.get("at")} for item in latest.values()]
+
+
+def downloads() -> list[dict]:
+    return _read(DOWNLOADS_PATH, [])
+
+
+def add_download(user_id: int, username: str | None, number: int, at: str, name: str | None = None) -> None:
+    items = downloads()
+    items.append({"id": user_id, "username": username, "name": name, "build": number, "at": at})
+    _write(DOWNLOADS_PATH, items)
+
+
 def builds() -> list[dict]:
     return sorted(_read(BUILDS_PATH, []), key=lambda b: b["number"])
 

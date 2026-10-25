@@ -227,6 +227,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var openWallet: (() -> Void)?
     
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
+    var mindGramMarkTapped: ((MindGramMarks.Kind) -> Void)?
     var displayStatusPremiumIntro: (() -> Void)?
     var displayUniqueGiftInfo: ((UIView, String) -> Void)?
     var openUniqueGift: ((UIView, String) -> Void)?
@@ -1162,6 +1163,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = .none
             }
             
+            var mindGramMarkAction: (() -> Void)?
+            if case let .mindGramMark(mark) = verifiedIcon {
+                mindGramMarkAction = { [weak self] in
+                    self?.mindGramMarkTapped?(mark)
+                }
+            }
             let iconSize = self.titleVerifiedIconView.update(
                 transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
@@ -1171,7 +1178,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     content: emojiRegularStatusContent,
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
-                    action: nil,
+                    action: mindGramMarkAction,
                     emojiFileUpdated: nil
                 )),
                 environment: {},
@@ -1186,7 +1193,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     content: emojiExpandedStatusContent,
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
-                    action: {}
+                    action: mindGramMarkAction ?? {}
                 )),
                 environment: {},
                 containerSize: CGSize(width: 26.0, height: 26.0)
@@ -2889,6 +2896,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if !(self.state?.isEditing ?? false) {
+            if case .mindGramMark = self.currentVerifiedIcon {
+                let iconFrame = self.titleVerifiedIconView.convert(self.titleVerifiedIconView.bounds, to: self.view).insetBy(dx: -8.0, dy: -8.0)
+                let expandedIconFrame = self.titleExpandedVerifiedIconView.convert(self.titleExpandedVerifiedIconView.bounds, to: self.view).insetBy(dx: -8.0, dy: -8.0)
+                if expandedIconFrame.contains(point) && self.isAvatarExpanded {
+                    return self.titleExpandedVerifiedIconView.hitTest(self.view.convert(CGPoint(x: expandedIconFrame.midX, y: expandedIconFrame.midY), to: self.titleExpandedVerifiedIconView), with: event)
+                } else if iconFrame.contains(point) {
+                    return self.titleVerifiedIconView.hitTest(self.view.convert(CGPoint(x: iconFrame.midX, y: iconFrame.midY), to: self.titleVerifiedIconView), with: event)
+                }
+            }
             switch self.currentCredibilityIcon {
             case .premium:
                 let iconFrame = self.titleCredibilityIconView.convert(self.titleCredibilityIconView.bounds, to: self.view)

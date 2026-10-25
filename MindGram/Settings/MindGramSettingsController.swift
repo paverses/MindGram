@@ -35,8 +35,9 @@ private enum MindGramMenuItem: Int32 {
     // Помощь
     case helpHeader = 40
     case report = 41
-    case footer = 42
+    case footer = 50
     case settingsExport = 43
+    case admin = 44
 }
 
 /// The "MindGram" screen opened from Settings, grouped like Telegram's own Settings: look, profile, chats,
@@ -79,6 +80,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             pushImpl?(mindGramReportController(context: context))
         case .settingsExport:
             pushImpl?(mindGramSettingsExportController(context: context))
+        case .admin:
+            pushImpl?(mindGramAdminController(context: context))
         case .appearanceHeader, .profileHeader, .chatsHeader, .privacyHeader, .helpHeader, .footer:
             break
         }
@@ -112,6 +115,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             return PresentationResourcesSettings.dataUsage
         case "report":
             return PresentationResourcesSettings.support
+        case "admin":
+            return PresentationResourcesSettings.security
         case "export":
             return PresentationResourcesSettings.files
         default:
@@ -119,8 +124,9 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
         }
     })
 
+    let isAdmin = MindGramAdmin.isAdmin(context.account.peerId.id._internalGetInt64Value())
     let controller = mindGramListController(context: context, title: { $0.title }, arguments: arguments, entries: { _, strings in
-        return [
+        var entries: [MindGramListEntry] = [
             .header(id: MindGramMenuItem.appearanceHeader.rawValue, section: 0, text: strings.t("ВНЕШНИЙ ВИД", "LOOK")),
             .disclosure(id: MindGramMenuItem.appearance.rawValue, section: 0, title: strings.appearance, icon: "appearance"),
             .disclosure(id: MindGramMenuItem.liquidGlass.rawValue, section: 0, title: strings.liquidGlass, icon: "glass"),
@@ -147,6 +153,10 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             .disclosure(id: MindGramMenuItem.settingsExport.rawValue, section: 4, title: strings.t("Экспорт", "Export"), icon: "export"),
             .footer(id: MindGramMenuItem.footer.rawValue, section: 4, text: strings.menuFooter)
         ]
+        if isAdmin {
+            entries.insert(.disclosure(id: MindGramMenuItem.admin.rawValue, section: 4, title: strings.t("Админ-панель", "Admin Panel"), icon: "admin"), at: entries.count - 1)
+        }
+        return entries
     })
     pushImpl = { [weak controller] c in
         controller?.push(c)

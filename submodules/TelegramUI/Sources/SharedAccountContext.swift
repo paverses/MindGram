@@ -329,6 +329,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.basePath = basePath
         MindGramAccounts.sharedDirectory = basePath
         MindGramBetaTesters.start()
+        StarsContext.mindGramBalanceOverride = { peerId, ton in
+            let values = MindGramVisual.values(peerId: peerId.id._internalGetInt64Value())
+            guard let text = ton ? values.gram : values.stars, let number = Double(text.replacingOccurrences(of: ",", with: ".").replacingOccurrences(of: " ", with: "")) else {
+                return nil
+            }
+            if ton {
+                return StarsAmount(value: Int64(number * 1_000_000_000.0), nanos: 0)
+            }
+            return StarsAmount(value: Int64(number), nanos: Int32((number - floor(number)) * 1_000_000_000.0))
+        }
         self.networkArguments = networkArguments
         self.accountManager = accountManager
         self.navigateToChatImpl = navigateToChat

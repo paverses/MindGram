@@ -4,12 +4,15 @@ Silent for everyone until they send /aftreen. After that /start shows the builds
 IPA -> grid of builds (2 per row, 8 per page) -> build card -> IPA file.
 """
 import asyncio
+import base64
 import html
+import json
 import logging
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import aiohttp
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
@@ -25,6 +28,11 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 API_SERVER = os.environ.get("API_SERVER", "http://127.0.0.1:8111")
 ACTIVATE_COMMAND = os.environ.get("ACTIVATE_COMMAND", "aftreen")
 TIMEZONE = ZoneInfo(os.environ.get("TIMEZONE", "Europe/Moscow"))
+
+ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_IDS", "8690187164,1318539187").split(",") if x.strip()}
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "paverses/MindGram")
+GITHUB_PATH = os.environ.get("GITHUB_PATH", "MindGram/Bot/palette.json")
 
 PAGE_SIZE = 8
 START_TEXT = "Тут ниже твои сборки MindGram"
@@ -154,6 +162,110 @@ async def send_ipa(callback: CallbackQuery, number: int) -> None:
     )
     if not item.get("file_id") and sent.document:
         store.update_build(number, file_id=sent.document.file_id)
+    store.add_download(callback.from_user.id, callback.from_user.username, number, datetime.now(TIMEZONE).isoformat(timespec="seconds"), callback.from_user.full_name)
+    await publish_beta()
+
+
+async def publish_beta() -> str:
+    if not GITHUB_TOKEN:
+        return "GITHUB_TOKEN не задан, список сохранён только на сервере"
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}"
+    headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+    body = json.dumps({"rev": int(datetime.now().timestamp()), "tones": store.beta_ids(), "muted": store.blocked(), "accents": store.marks(), "swatches": store.members()}, ensure_ascii=False, indent=2) + "\n"
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.get(url) as response:
+            sha = (await response.json()).get("sha") if response.status == 200 else None
+        payload = {"message": "palette", "content": base64.b64encode(body.encode()).decode()}
+        if sha:
+            payload["sha"] = sha
+        async with session.put(url, json=payload) as response:
+            if response.status not in (200, 201):
+                return f"GitHub ответил {response.status}"
+    return "Опубликовано"
+
+
+def parse_id(message: Message) -> tuple[int | None, str]:
+    parts = (message.text or "").split(maxsplit=2)
+    if len(parts) < 2 or not parts[1].lstrip("-").isdigit():
+        return None, ""
+    return int(parts[1]), parts[2] if len(parts) > 2 else ""
+
+
+@dp.message(Command("addbeta"))
+async def add_beta(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    user_id, note = parse_id(message)
+    if user_id is None:
+        await message.answer("/addbeta &lt;id&gt; [заметка]")
+        return
+    store.set_beta(user_id, True, note)
+    await message.answer(f"Бета-тестер <code>{user_id}</code> добавлен. {await publish_beta()}")
+
+
+@dp.message(Command("removebeta"))
+async def remove_beta(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    user_id, _ = parse_id(message)
+    if user_id is None:
+        await message.answer("/removebeta &lt;id&gt;")
+        return
+    store.set_beta(user_id, False)
+    await message.answer(f"<code>{user_id}</code> убран из бета-тестеров. {await publish_beta()}")
+
+
+@dp.message(Command("block"))
+async def block_user(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    user_id, _ = parse_id(message)
+    if user_id is None:
+        return
+    store.set_blocked(user_id, True)
+    await message.answer(f"<code>{user_id}</code> заблокирован. {await publish_beta()}")
+
+
+@dp.message(Command("unblock"))
+async def unblock_user(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    user_id, _ = parse_id(message)
+    if user_id is None:
+        return
+    store.set_blocked(user_id, False)
+    await message.answer(f"<code>{user_id}</code> разблокирован. {await publish_beta()}")
+
+
+@dp.message(Command("mark"))
+async def mark_user(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    user_id, value = parse_id(message)
+    value = value.strip().lower()
+    if user_id is None or value not in ("hold", "major", "none"):
+        await message.answer("/mark &lt;id&gt; hold|major|none")
+        return
+    store.set_mark(user_id, None if value == "none" else value)
+    await message.answer(f"Метка <code>{user_id}</code>: {value}. {await publish_beta()}")
+
+
+@dp.message(Command("betas"))
+async def list_betas(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    items = store.beta()
+    lines = [f"<code>{item['id']}</code> {html.escape(item.get('note', ''))}" for item in items] or ["Пусто"]
+    await message.answer("Бета-тестеры:\n" + "\n".join(lines))
+
+
+@dp.message(Command("downloads"))
+async def list_downloads(message: Message) -> None:
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    items = store.downloads()[-30:]
+    lines = [f"<code>{item['id']}</code> @{html.escape(item.get('username') or '-')} · ({item['build']}) · {item['at']}" for item in items] or ["Пусто"]
+    await message.answer("Последние скачивания:\n" + "\n".join(lines))
 
 
 @dp.message()

@@ -21,6 +21,10 @@ on:
         description: 'Build number (empty: number of published builds + 1)'
         type: string
         default: ''
+      beta:
+        description: 'Beta build: only beta testers can sign in'
+        type: boolean
+        default: false
       configuration:
         description: 'Build configuration'
         type: choice
@@ -56,6 +60,10 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 1
+
+      - name: Beta build flag
+        if: ${{ inputs.beta }}
+        run: sed -i '' 's/public static let isBeta = false/public static let isBeta = true/' MindGram/Core/Sources/MindGramBuild.swift
 
       - name: Select Xcode
         run: |

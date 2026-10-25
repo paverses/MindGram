@@ -826,6 +826,35 @@ final class AuthorizedApplicationContext {
             }
         })
 
+        do {
+            let betaAccountId = context.account.id
+            let betaAccountManager = context.sharedContext.accountManager
+            MindGramBetaTesters.access(userId: context.account.peerId.id._internalGetInt64Value(), requiresBeta: MindGramBuild.isBeta, completion: { [weak self] access in
+                guard let self else {
+                    return
+                }
+                let isBlocked: Bool
+                switch access {
+                case .allowed:
+                    return
+                case .blocked:
+                    isBlocked = true
+                case .notBetaTester:
+                    isBlocked = false
+                }
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                let isRussian = ["ru", "uk", "be"].contains(where: { presentationData.strings.baseLanguageCode.hasPrefix($0) })
+                let controller = textAlertController(context: self.context, title: "MindGram", text: isBlocked ? (isRussian ? "Этот аккаунт заблокирован в MindGram." : "This account is blocked in MindGram.") : (isRussian ? "Этот аккаунт не участвует в бета-тестировании. Вход в бета-версию недоступен." : "This account is not a beta tester. The beta build cannot be used with it."), actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                    let _ = logoutFromAccount(id: betaAccountId, accountManager: betaAccountManager, alreadyLoggedOutRemotely: false).start()
+                })], dismissOnOutsideTap: false)
+                if let topController = self.rootController.viewControllers.last as? ViewController {
+                    topController.present(controller, in: .window(.root))
+                } else {
+                    let _ = logoutFromAccount(id: betaAccountId, accountManager: betaAccountManager, alreadyLoggedOutRemotely: false).start()
+                }
+            })
+        }
+
         // MindGram: rebuild the tabs when "Скрыть вкладку «Контакты»" changes.
         self.mindGramSettingsObserver = NotificationCenter.default.addObserver(forName: MindGramSettings.didChangeNotification, object: nil, queue: .main, using: { [weak self] _ in
             guard let self else {

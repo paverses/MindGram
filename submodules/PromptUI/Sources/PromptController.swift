@@ -211,6 +211,7 @@ public func promptController(
     placeholder: String? = nil,
     characterLimit: Int = 1000,
     displayCharacterLimit: Bool = false,
+    keyboardType: UIKeyboardType = .default,
     apply: @escaping (String?) -> Void,
     dismissed: @escaping () -> Void = {}
 ) -> ViewController {
@@ -251,6 +252,7 @@ public func promptController(
                 initialValue: value.flatMap { NSAttributedString(string: $0) },
                 placeholder: placeholder ?? "",
                 characterLimit: characterLimit,
+                keyboardType: keyboardType,
                 formatMenuAvailability: .none,
                 emptyLineHandling: .notAllowed,
                 isInitiallyFocused: true,

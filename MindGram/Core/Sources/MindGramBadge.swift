@@ -66,7 +66,7 @@ public enum MindGramBadge {
         }
     }
 
-    public static let size = CGSize(width: 186.0, height: 44.0)
+    public static let size = CGSize(width: 104.0, height: 25.0)
 
     private static var cache: [Style: UIImage] = [:]
 
@@ -87,7 +87,7 @@ public enum MindGramBadge {
         let size = self.size
         return UIGraphicsImageRenderer(size: size).image { context in
             let cg = context.cgContext
-            let pillRect = CGRect(origin: CGPoint(), size: size).insetBy(dx: 2.0, dy: 2.0)
+            let pillRect = CGRect(origin: CGPoint(), size: size).insetBy(dx: 1.0, dy: 1.0)
             let pill = UIBezierPath(roundedRect: pillRect, cornerRadius: pillRect.height / 2.0)
             let colors = style.colors
 
@@ -103,12 +103,12 @@ public enum MindGramBadge {
                 pill.fill()
             }
 
-            let font = UIFont(name: "Unbounded-Bold", size: 20.0) ?? UIFont.systemFont(ofSize: 21.0, weight: .heavy)
+            let font = UIFont(name: "Unbounded-Bold", size: 11.2) ?? UIFont.systemFont(ofSize: 11.8, weight: .heavy)
             let text = NSAttributedString(string: "indGram", attributes: [.font: font, .foregroundColor: UIColor.white, .kern: 0.3])
             let textSize = text.size()
-            let logoHeight: CGFloat = 16.0
+            let logoHeight: CGFloat = 9.0
             let logoSize = CGSize(width: logoHeight * MindGramLogo.aspectRatio, height: logoHeight)
-            let spacing: CGFloat = 4.5
+            let spacing: CGFloat = 2.5
             let totalWidth = logoSize.width + spacing + textSize.width
             let originX = floor((size.width - totalWidth) / 2.0)
 

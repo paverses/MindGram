@@ -1101,13 +1101,24 @@ public final class StarsContext {
     }
     
     private let impl: QueueLocalObject<StarsContextImpl>
+
+    public static var mindGramBalanceOverride: ((EnginePeer.Id, Bool) -> StarsAmount?)?
+
+    private func mindGramApplyOverride(_ state: StarsContext.State?, peerId: EnginePeer.Id) -> StarsContext.State? {
+        guard var state, let balance = StarsContext.mindGramBalanceOverride?(peerId, self.ton) else {
+            return state
+        }
+        state.balance = balance
+        return state
+    }
     
     public var state: Signal<StarsContext.State?, NoError> {
-        return Signal { subscriber in
+        return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
-            self.impl.with { impl in
+            self?.impl.with { impl in
+                let peerId = impl.peerId
                 disposable.set(impl.state.start(next: { value in
-                    subscriber.putNext(value)
+                    subscriber.putNext(self?.mindGramApplyOverride(value, peerId: peerId) ?? value)
                 }))
             }
             return disposable
@@ -1126,8 +1137,13 @@ public final class StarsContext {
     
     public var currentState: StarsContext.State? {
         var state: StarsContext.State?
+        var peerId: EnginePeer.Id?
         self.impl.syncWith { impl in
             state = impl._state
+            peerId = impl.peerId
+        }
+        if let peerId {
+            return self.mindGramApplyOverride(state, peerId: peerId)
         }
         return state
     }

@@ -427,7 +427,7 @@ final class NavigationTransitionCoordinator {
         self.backHoleView?.removeFromSuperview()
         if let layer = self.navigationBarTransitionLayer {
             self.navigationBarTransitionLayer = nil
-            if layer.putBack(lingering: lingering) {
+            if layer.putBack(lingering: false) {
                 self.container.beginLingering(layer)
                 self.lingeringBarLayer = layer
             } else {

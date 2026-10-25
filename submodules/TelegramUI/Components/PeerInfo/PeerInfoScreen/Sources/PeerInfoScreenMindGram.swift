@@ -6,6 +6,8 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import ContextUI
+import ComponentFlow
+import AlertComponent
 import PromptUI
 import MindGramUI
 
@@ -51,21 +53,14 @@ extension PeerInfoScreenNode {
             if case .user = peer {
                 subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Визуал" : "Visual", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak self] c, _ in
+                }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
                     guard let self else {
                         return
                     }
-                    c?.pushItems(items: .single(ContextController.Items(content: .list(self.mindGramVisualItems(peer: peer, backTitle: backTitle)))))
+                    self.controller?.push(mindGramVisualController(context: self.context, peerId: peer.id.id._internalGetInt64Value()))
                 })))
             }
-            subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Метка" : "Mark", icon: { theme in
-                return generateTintedImage(image: MindGramMarks.image(.mind, size: 24.0), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] c, _ in
-                guard let self else {
-                    return
-                }
-                c?.pushItems(items: .single(ContextController.Items(content: .list(self.mindGramMarkItems(peer: peer, backTitle: backTitle)))))
-            })))
             subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Скопировать ID" : "Copy ID", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
@@ -110,57 +105,50 @@ extension PeerInfoScreenNode {
         }), in: .window(.root))
     }
 
-    func mindGramVisualItems(peer: EnginePeer, backTitle: String) -> [ContextMenuItem] {
+    func mindGramPresentMarkInfo(_ mark: MindGramMarks.Kind) {
         let isRussian = self.mindGramIsRussian
-        let peerId = peer.id.id._internalGetInt64Value()
-        var items: [ContextMenuItem] = []
-        items.append(.action(ContextMenuActionItem(text: backTitle, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-        }, iconPosition: .left, action: { c, _ in
-            c?.popItems()
-        })))
-        items.append(.separator)
-        for field in [MindGramVisualField.phone, .stars, .gram, .ratingLevel, .ratingPoints, .ratingNext] {
-            items.append(.action(ContextMenuActionItem(text: field.title(isRussian: isRussian), icon: { _ in
-                return nil
-            }, action: { [weak self] _, f in
-                f(.dismissWithoutContent)
-                guard let self else {
+        let presentationData = self.presentationData
+        let theme = presentationData.theme
+        let textFont = UIFont.systemFont(ofSize: 15.0)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineSpacing = 2.0
+
+        let header = NSMutableAttributedString()
+        let iconAttachment = NSTextAttachment()
+        iconAttachment.image = generateTintedImage(image: MindGramMarks.image(mark, size: 72.0), color: theme.list.itemAccentColor)
+        iconAttachment.bounds = CGRect(x: 0.0, y: 0.0, width: 72.0, height: 72.0)
+        header.append(NSAttributedString(attachment: iconAttachment))
+        header.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: header.length))
+
+        let body = NSMutableAttributedString()
+        let attributes: [NSAttributedString.Key: Any] = [.font: textFont, .foregroundColor: theme.list.itemPrimaryTextColor, .paragraphStyle: paragraph]
+        var actions: [AlertScreen.Action] = []
+        if mark == .mind {
+            body.append(NSAttributedString(string: isRussian ? "Статус бета-тестера MindGram. Его видят все, кто пользуется MindGram.\n\nДоступ к бета-тестированию — 100 " : "MindGram beta tester status. Everyone who uses MindGram sees it.\n\nBeta access costs 100 ", attributes: attributes))
+            let starAttachment = NSTextAttachment()
+            starAttachment.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
+            starAttachment.bounds = CGRect(x: 0.0, y: -3.0, width: 16.0, height: 16.0)
+            body.append(NSAttributedString(attachment: starAttachment))
+            body.append(NSAttributedString(string: isRussian ? " в месяц." : " a month.", attributes: attributes))
+            actions.append(AlertScreen.Action(title: isRussian ? "Купить статус" : "Buy Status", type: .default, action: { [weak self] in
+                guard let self, let navigationController = self.controller?.navigationController as? NavigationController else {
                     return
                 }
-                self.controller?.present(mindGramVisualPromptController(context: self.context, peerId: peerId, field: field), in: .window(.root))
-            })))
+                self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: "https://t.me/+bPjh0R3HNjAxNWI5", forceExternal: false, presentationData: self.presentationData, navigationController: navigationController, dismissInput: {})
+            }))
+            actions.append(AlertScreen.Action(title: presentationData.strings.Common_Close, action: {}))
+        } else {
+            body.append(NSAttributedString(string: mark.confirmedText(isRussian: isRussian), attributes: attributes))
+            actions.append(AlertScreen.Action(title: presentationData.strings.Common_OK, type: .default, action: {}))
         }
-        return items
-    }
 
-    func mindGramMarkItems(peer: EnginePeer, backTitle: String) -> [ContextMenuItem] {
-        let isRussian = self.mindGramIsRussian
-        let peerId = peer.id.id._internalGetInt64Value()
-        let current = MindGramMarks.storedMark(peerId: peerId)
-        var items: [ContextMenuItem] = []
-        items.append(.action(ContextMenuActionItem(text: backTitle, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-        }, iconPosition: .left, action: { c, _ in
-            c?.popItems()
-        })))
-        items.append(.separator)
-        let options: [MindGramMarks.Kind?] = [nil] + MindGramMarks.Kind.manualCases.map { Optional($0) }
-        for option in options {
-            let title = option?.title ?? (isRussian ? "Без метки" : "No Mark")
-            items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
-                if option == current {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
-                if let option {
-                    return generateTintedImage(image: MindGramMarks.image(option, size: 24.0), color: theme.contextMenu.primaryColor)
-                }
-                return nil
-            }, action: { _, f in
-                f(.default)
-                MindGramMarks.setMark(peerId: peerId, option)
-            })))
-        }
-        return items
+        let content: [AnyComponentWithIdentity<AlertComponentEnvironment>] = [
+            AnyComponentWithIdentity(id: "icon", component: AnyComponent(AlertTextComponent(content: .attributed(header), alignment: .center))),
+            AnyComponentWithIdentity(id: "title", component: AnyComponent(AlertTitleComponent(title: mark == .mind ? "Mind" : mark.title, alignment: .center))),
+            AnyComponentWithIdentity(id: "text", component: AnyComponent(AlertTextComponent(content: .attributed(body), alignment: .center)))
+        ]
+        let alert = AlertScreen(configuration: AlertScreen.Configuration(actionAlignment: .vertical), content: content, actions: actions, updatedPresentationData: (presentationData, self.context.sharedContext.presentationData))
+        self.controller?.present(alert, in: .window(.root))
     }
 }
