@@ -74,7 +74,7 @@ public enum MindGramBadge {
         if let image = self.cache[style] {
             return image
         }
-        let image = self.render(style)
+        let image = UIImage(named: "Components/MindGramBadge_\(style.rawValue)", in: Bundle.main, compatibleWith: nil) ?? self.render(style)
         self.cache[style] = image
         return image
     }
