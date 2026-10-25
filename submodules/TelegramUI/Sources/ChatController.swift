@@ -11633,8 +11633,7 @@ extension ChatControllerImpl {
             }
             let authorName = replied.author.flatMap { $0.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) } ?? ""
             let quotedText = replyToMessageId.quote?.text ?? replied.text
-            let header = authorName.isEmpty ? quotedText : (quotedText.isEmpty ? authorName : authorName + "
-" + quotedText)
+            let header = authorName.isEmpty ? quotedText : (quotedText.isEmpty ? authorName : authorName + "\n" + quotedText)
             guard !header.isEmpty else {
                 return message
             }
@@ -11655,8 +11654,7 @@ extension ChatControllerImpl {
                 entities.insert(MessageTextEntity(range: 0 ..< (authorName as NSString).length, type: author.id.namespace == Namespaces.Peer.CloudUser ? .TextMention(peerId: author.id) : .Bold), at: 1)
             }
             otherAttributes.append(TextEntitiesMessageAttribute(entities: entities))
-            let updatedText = text.isEmpty ? header : header + "
-" + text
+            let updatedText = text.isEmpty ? header : header + "\n" + text
             return .message(text: updatedText, attributes: otherAttributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
         }
     }
