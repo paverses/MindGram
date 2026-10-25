@@ -12,7 +12,7 @@ import MindGramCore
 
 /// A list of chats with "Add Chat" on top; swipe a chat to remove it. Used by ghost mode (selected chats,
 /// exceptions), auto-translate, translating own messages and self-destruct. `get`/`set` hold PeerId.toInt64().
-func mindGramPeersListController(context: AccountContext, title: String, footer: String, get: @escaping () -> Set<Int64>, set: @escaping (Set<Int64>) -> Void) -> ViewController {
+func mindGramPeersListController(context: AccountContext, title: String, footer: String, get: @escaping () -> Set<Int64>, set: @escaping (Set<Int64>) -> Void, open: ((EnginePeer) -> Void)? = nil) -> ViewController {
     var pushImpl: ((ViewController) -> Void)?
     var peers: [EnginePeer] = []
     var revealedPeerId: EnginePeer.Id?
@@ -41,7 +41,7 @@ func mindGramPeersListController(context: AccountContext, title: String, footer:
         guard key.hasPrefix("peer:"), let value = Int64(key.dropFirst(5)), let peer = peers.first(where: { $0.id.toInt64() == value }) else {
             return ItemListTextItem(presentationData: presentationData, text: .plain(""), sectionId: section)
         }
-        return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: context, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealedPeerId == peer.id), switchValue: nil, enabled: true, selectable: false, sectionId: section, action: nil, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+        return ItemListPeerItem(presentationData: presentationData, systemStyle: .glass, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: context, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealedPeerId == peer.id), switchValue: nil, enabled: true, selectable: open != nil, sectionId: section, action: open.map { open in { open(peer) } }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
             if !((peerId == nil && fromPeerId == revealedPeerId) || (peerId != nil && fromPeerId == nil)) {
                 return
             }

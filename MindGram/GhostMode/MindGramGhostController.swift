@@ -31,6 +31,9 @@ private enum GhostRow: Int32 {
     case whereFooter = 24
     case chatListButton = 30
     case footer = 31
+    case cleanHeader = 40
+    case hideAds = 41
+    case hideStories = 42
 }
 
 /// Режим призрака: what the server isn't told, and in which chats.
@@ -49,6 +52,10 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
             MindGramGhost.onlySelectedChats = value
         case .chatListButton:
             MindGramGhost.set(.chatListButton, value)
+        case .hideAds:
+            MindGramGhost.hideAds = value
+        case .hideStories:
+            MindGramGhost.hideStories = value
         default:
             break
         }
@@ -96,6 +103,9 @@ func mindGramGhostController(context: AccountContext) -> ViewController {
         }
         entries.append(.toggle(id: GhostRow.chatListButton.rawValue, section: 3, title: strings.ghostTitle(.chatListButton), info: strings.ghostInfo(.chatListButton), value: MindGramGhost.isSet(.chatListButton)))
         entries.append(.footer(id: GhostRow.footer.rawValue, section: 3, text: strings.ghostFooter))
+        entries.append(.header(id: GhostRow.cleanHeader.rawValue, section: 4, text: strings.t("БЕЗ ЛИШНЕГО", "CLEAN TELEGRAM")))
+        entries.append(.toggle(id: GhostRow.hideAds.rawValue, section: 4, title: strings.t("Без рекламы", "No Ads"), info: strings.t("Убирает спонсорские посты в каналах", "Removes sponsored posts in channels"), value: MindGramGhost.hideAds))
+        entries.append(.toggle(id: GhostRow.hideStories.rawValue, section: 4, title: strings.t("Скрыть истории", "Hide Stories"), info: strings.t("Убирает ленту историй над чатами", "Removes the stories row above chats"), value: MindGramGhost.hideStories))
         return entries
     })
     pushImpl = { [weak controller] c in

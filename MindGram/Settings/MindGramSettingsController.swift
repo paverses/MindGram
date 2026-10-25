@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
@@ -32,18 +33,42 @@ private enum MindGramMenuItem: Int32 {
     case privacyHeader = 30
     case ghost = 31
     case deleted = 32
+    case hiddenChats = 33
     // Помощь
     case helpHeader = 40
     case report = 41
     case footer = 50
     case settingsExport = 43
     case admin = 44
+    case ping = 45
 }
 
 /// The "MindGram" screen opened from Settings, grouped like Telegram's own Settings: look, profile, chats,
 /// privacy, help.
 public func mindGramSettingsController(context: AccountContext) -> ViewController {
     var pushImpl: ((ViewController) -> Void)?
+    var pingText: String?
+    let pingUpdated = ValuePromise<Int>(0, ignoreRepeated: true)
+    var pingRevision = 0
+    let measurePing = {
+        pingText = "…"
+        pingRevision += 1
+        pingUpdated.set(pingRevision)
+        let start = CFAbsoluteTimeGetCurrent()
+        let _ = (context.engine.peers.resolvePeerByName(name: "telegram", referrer: nil, ageLimit: 0)
+        |> filter { result in
+            if case .result = result {
+                return true
+            }
+            return false
+        }
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { _ in
+            pingText = "\(Int((CFAbsoluteTimeGetCurrent() - start) * 1000.0)) ms"
+            pingRevision += 1
+            pingUpdated.set(pingRevision)
+        })
+    }
 
     let arguments = MindGramListArguments(open: { id in
         guard let item = MindGramMenuItem(rawValue: id) else {
@@ -76,12 +101,18 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             pushImpl?(mindGramGhostController(context: context))
         case .deleted:
             pushImpl?(mindGramDeletedController(context: context))
+        case .hiddenChats:
+            mindGramOpenHiddenChats(context: context, push: { controller in
+                pushImpl?(controller)
+            })
         case .report:
             pushImpl?(mindGramReportController(context: context))
         case .settingsExport:
             pushImpl?(mindGramSettingsExportController(context: context))
         case .admin:
             pushImpl?(mindGramAdminController(context: context))
+        case .ping:
+            measurePing()
         case .appearanceHeader, .profileHeader, .chatsHeader, .privacyHeader, .helpHeader, .footer:
             break
         }
@@ -115,6 +146,8 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             return PresentationResourcesSettings.dataUsage
         case "report":
             return PresentationResourcesSettings.support
+        case "hidden":
+            return PresentationResourcesSettings.lockOrange
         case "admin":
             return PresentationResourcesSettings.security
         case "export":
@@ -125,7 +158,7 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
     })
 
     let isAdmin = MindGramAdmin.isAdmin(context.account.peerId.id._internalGetInt64Value())
-    let controller = mindGramListController(context: context, title: { $0.title }, arguments: arguments, entries: { _, strings in
+    let controller = mindGramListController(context: context, title: { $0.title }, arguments: arguments, extraUpdates: pingUpdated.get() |> map { _ in Void() }, entries: { _, strings in
         var entries: [MindGramListEntry] = [
             .header(id: MindGramMenuItem.appearanceHeader.rawValue, section: 0, text: strings.t("ВНЕШНИЙ ВИД", "LOOK")),
             .disclosure(id: MindGramMenuItem.appearance.rawValue, section: 0, title: strings.appearance, icon: "appearance"),
@@ -147,12 +180,14 @@ public func mindGramSettingsController(context: AccountContext) -> ViewControlle
             .header(id: MindGramMenuItem.privacyHeader.rawValue, section: 3, text: strings.t("ПРИВАТНОСТЬ", "PRIVACY")),
             .disclosure(id: MindGramMenuItem.ghost.rawValue, section: 3, title: strings.ghostMode, icon: "ghost"),
             .disclosure(id: MindGramMenuItem.deleted.rawValue, section: 3, title: strings.t("Удалённые и правки", "Deleted & Edited"), icon: "deleted"),
+            .disclosure(id: MindGramMenuItem.hiddenChats.rawValue, section: 3, title: strings.t("Скрытые чаты", "Hidden Chats"), icon: "hidden"),
 
             .header(id: MindGramMenuItem.helpHeader.rawValue, section: 4, text: strings.t("ПОМОЩЬ", "HELP")),
             .disclosure(id: MindGramMenuItem.report.rawValue, section: 4, title: strings.report, icon: "report"),
             .disclosure(id: MindGramMenuItem.settingsExport.rawValue, section: 4, title: strings.t("Экспорт", "Export"), icon: "export"),
             .footer(id: MindGramMenuItem.footer.rawValue, section: 4, text: strings.menuFooter)
         ]
+        entries.insert(.value(id: MindGramMenuItem.ping.rawValue, section: 4, title: strings.t("Пинг", "Ping"), value: pingText ?? strings.t("Проверить", "Check")), at: entries.count - 1)
         if isAdmin {
             entries.insert(.disclosure(id: MindGramMenuItem.admin.rawValue, section: 4, title: strings.t("Админ-панель", "Admin Panel"), icon: "admin"), at: entries.count - 1)
         }

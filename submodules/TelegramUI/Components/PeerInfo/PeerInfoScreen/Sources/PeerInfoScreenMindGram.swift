@@ -61,6 +61,15 @@ extension PeerInfoScreenNode {
                     self.controller?.push(mindGramVisualController(context: self.context, peerId: peer.id.id._internalGetInt64Value()))
                 })))
             }
+            subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Статистика" : "Statistics", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                guard let self else {
+                    return
+                }
+                self.controller?.push(mindGramChatStatsController(context: self.context, peer: peer))
+            })))
             subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Скопировать ID" : "Copy ID", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in

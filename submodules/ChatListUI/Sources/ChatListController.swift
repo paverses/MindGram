@@ -2186,6 +2186,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.storiesReady.set(.single(true))
             } else {
                 self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: self.location == .chatList(groupId: .archive))
+                |> map { subscriptions -> EngineStorySubscriptions in
+                    if MindGramGhost.hideStories {
+                        return EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
+                    }
+                    return subscriptions
+                }
                 |> deliverOnMainQueue).startStrict(next: { [weak self] rawStorySubscriptions in
                     guard let self else {
                         return

@@ -2547,6 +2547,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         controllerInteraction.navigationController()?.pushViewController(mindGramEditHistoryController(context: context, versions: versions, currentText: message.text), animated: true)
                     })))
                 }
+                if let statsPeer = message.peers[message.id.peerId].flatMap(EnginePeer.init) {
+                    subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Статистика чата" : "Chat Statistics", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.default)
+                        controllerInteraction.navigationController()?.pushViewController(mindGramChatStatsController(context: context, peer: statsPeer), animated: true)
+                    })))
+                }
                 if let exportPeer {
                     subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Экспорт чата" : "Export Chat", icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor)

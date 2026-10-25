@@ -53,6 +53,26 @@ public enum MindGramGhost {
         self.notify()
     }
 
+    public static var hideAds: Bool {
+        get {
+            return self.defaults.bool(forKey: "MindGram.hideAds")
+        }
+        set {
+            self.defaults.set(newValue, forKey: "MindGram.hideAds")
+            self.notify()
+        }
+    }
+
+    public static var hideStories: Bool {
+        get {
+            return self.defaults.bool(forKey: "MindGram.hideStories")
+        }
+        set {
+            self.defaults.set(newValue, forKey: "MindGram.hideStories")
+            self.notify()
+        }
+    }
+
     /// Ghost mode only in the chats in `ghostChats`, instead of everywhere.
     public static var onlySelectedChats: Bool {
         get {

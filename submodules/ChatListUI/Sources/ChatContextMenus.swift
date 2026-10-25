@@ -366,6 +366,11 @@ func chatContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, promoI
                             }
                         }
                         
+                        items.append(.action(ContextMenuActionItem(text: ["ru", "uk", "be"].contains(where: { strings.primaryComponent.languageCode.lowercased().hasPrefix($0) }) ? "Скрыть чат" : "Hide Chat", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            MindGramHiddenChats.setHidden(peerId.toInt64(), true)
+                            f(.default)
+                        })))
+
                         // MindGram: ghost mode keeps read receipts back; this sends the real one for the chat.
                         if MindGramGhost.applies(.hideRead, peerId: peerId.toInt64()) {
                             let isRussian = ["ru", "uk", "be"].contains(where: { strings.primaryComponent.languageCode.lowercased().hasPrefix($0) })
