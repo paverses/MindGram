@@ -467,6 +467,12 @@ func synchronizePeerReadState(network: Network, postbox: Postbox, stateManager: 
 
 /// MindGram: "Отметить прочитанным" — tells the server the chat is read up to its last message,
 /// even while ghost mode keeps read receipts to this device.
+func mindGramReadAfterAction(account: Account, peerId: PeerId) {
+    if MindGramGhost.applies(.hideRead, peerId: peerId.toInt64()) && MindGramGhost.isSet(.readAfterActions) {
+        let _ = mindGramSendReadReceipt(account: account, peerId: peerId).startStandalone()
+    }
+}
+
 public func mindGramSendReadReceipt(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
     let network = account.network
     let postbox = account.postbox

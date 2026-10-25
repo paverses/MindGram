@@ -9228,7 +9228,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         // MindGram: «Оформление текста» — the chosen font and formatting on every text sent.
-        let messages = mindGramStyledMessages(messages)
+        let messages = self.mindGramDeletedReplies(mindGramStyledMessages(messages))
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
             return
@@ -11586,7 +11586,13 @@ private func mindGramStyledMessages(_ messages: [EnqueueMessage]) -> [EnqueueMes
             }
         }
         let length = (styledText as NSString).length
-        for format in formats {
+        let letterFormats = MindGramTextStyle.letterFormats(for: styledText, formats: formats)
+        let wholeFormats: [MindGramTextStyle.Format] = letterFormats.isEmpty ? Array(formats) : (formats.contains(.quote) ? [.quote] : [])
+        var ranges: [(range: Range<Int>, format: MindGramTextStyle.Format)] = letterFormats
+        for format in wholeFormats {
+            ranges.append((0 ..< length, format))
+        }
+        for (range, format) in ranges {
             let type: MessageTextEntityType
             switch format {
             case .bold:
@@ -11604,12 +11610,53 @@ private func mindGramStyledMessages(_ messages: [EnqueueMessage]) -> [EnqueueMes
             case .quote:
                 type = .BlockQuote(isCollapsed: false)
             }
-            entities.append(MessageTextEntity(range: 0 ..< length, type: type))
+            entities.append(MessageTextEntity(range: range, type: type))
         }
         if !entities.isEmpty {
             otherAttributes.append(TextEntitiesMessageAttribute(entities: entities))
         }
         return .message(text: styledText, attributes: otherAttributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
+    }
+}
+
+extension ChatControllerImpl {
+    func mindGramDeletedReplies(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+        return messages.map { message -> EnqueueMessage in
+            guard case let .message(text, attributes, inlineStickers, mediaReference, threadId, replyToMessageId, _, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets) = message, let replyToMessageId else {
+                return message
+            }
+            let repliedId = replyToMessageId.messageId
+            guard MindGramDeleted.isDeleted(MindGramMessageKey(peerId: repliedId.peerId.toInt64(), namespace: repliedId.namespace, id: repliedId.id)), let replied = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(repliedId) else {
+                return message
+            }
+            let authorName = replied.author.flatMap { $0.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) } ?? ""
+            let quotedText = replyToMessageId.quote?.text ?? replied.text
+            let header = authorName.isEmpty ? quotedText : (quotedText.isEmpty ? authorName : authorName + "
+" + quotedText)
+            guard !header.isEmpty else {
+                return message
+            }
+            let headerLength = (header as NSString).length
+            let shift = headerLength + 1
+
+            var entities: [MessageTextEntity] = []
+            var otherAttributes: [MessageAttribute] = []
+            for attribute in attributes {
+                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                    entities = attribute.entities.map { MessageTextEntity(range: ($0.range.lowerBound + shift) ..< ($0.range.upperBound + shift), type: $0.type) }
+                } else if !(attribute is ReplyMessageAttribute) {
+                    otherAttributes.append(attribute)
+                }
+            }
+            entities.insert(MessageTextEntity(range: 0 ..< headerLength, type: .BlockQuote(isCollapsed: false)), at: 0)
+            if let author = replied.author, !authorName.isEmpty {
+                entities.insert(MessageTextEntity(range: 0 ..< (authorName as NSString).length, type: author.id.namespace == Namespaces.Peer.CloudUser ? .TextMention(peerId: author.id) : .Bold), at: 1)
+            }
+            otherAttributes.append(TextEntitiesMessageAttribute(entities: entities))
+            let updatedText = text.isEmpty ? header : header + "
+" + text
+            return .message(text: updatedText, attributes: otherAttributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
+        }
     }
 }
 

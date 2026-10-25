@@ -24,7 +24,7 @@ func mindGramGlassController(context: AccountContext) -> ViewController {
         entries.append(.header(id: 0, section: 0, text: strings.glassHeader))
         entries.append(.custom(id: 1, section: 0, key: "preview", revision: MindGramSettings.isOn(.glassMessages) ? 1 : 0))
         for (index, toggle) in glassToggles.enumerated() {
-            entries.append(.toggle(id: Int32(10 + index), section: 1, title: strings.toggleTitle(toggle), info: strings.toggleInfo(toggle), value: MindGramSettings.isOn(toggle)))
+            entries.append(.toggleEx(id: Int32(10 + index), section: 1, title: strings.toggleTitle(toggle), info: strings.toggleInfo(toggle), value: MindGramSettings.storedValue(toggle), enabled: !MindGramSettings.isLockedByClassicDesign(toggle), beta: false))
         }
         entries.append(.footer(id: 100, section: 1, text: strings.glassFooter))
         return entries

@@ -27,8 +27,11 @@ public struct MindGramStrings {
 
     // Оформление
     var classicDesign: String { return t("Старый дизайн Telegram", "Classic Telegram Design") }
-    var classicDesignInfo: String { return t("Интерфейс без жидкого стекла", "Interface without liquid glass") }
-    var classicDesignFooter: String { return t("Возвращает панели, вкладки и списки, как в Telegram 2019–2024. Применяется после перезапуска.", "Brings back the bars, tabs and lists of Telegram 2019–2024. Applies after a restart.") }
+    var classicDesignInfo: String { return t("Без жидкого стекла", "Without liquid glass") }
+    var classicDesignFooter: String { return t("Возвращает старый дизайн Telegram.", "Brings back the classic Telegram design.") }
+    var betaText: String { return t("Это бета-функция. Она ещё в разработке и может работать нестабильно. Используй на свой страх и риск.", "This is a beta feature. It is still in development and may be unstable. Use it at your own risk.") }
+    var classicConflictTitle: String { return t("Старый дизайн", "Classic Design") }
+    var classicConflictText: String { return t("Жидкое стекло, размер навбара и эксперименты оформления будут выключены, пока включён старый дизайн.", "Liquid Glass, tab bar size and design experiments are turned off while the classic design is on.") }
     var restartTitle: String { return t("Нужен перезапуск", "Restart Required") }
     var restartText: String { return t("Дизайн сменится после перезапуска MindGram.", "The design changes after MindGram restarts.") }
     var restartAction: String { return t("Перезапуск", "Restart") }
@@ -100,7 +103,7 @@ public struct MindGramStrings {
         case .glassMessages:
             return t("Прозрачное стекло на пузырях", "Clear glass on message bubbles")
         case .glassProfile:
-            return t("Стеклянные кнопки и разделы профиля и настроек", "Glass buttons and sections in profiles and Settings")
+            return t("Стекло в профиле и настройках", "Glass in profiles and Settings")
         case .glassBotButtons:
             return t("Стекло на инлайн-кнопках ботов", "Glass on bot inline buttons")
         case .plusAttachMenu:
@@ -120,7 +123,7 @@ public struct MindGramStrings {
         }
     }
 
-    var profileFooter: String { return t("Дата регистрации — оценка по ID: Telegram её не сообщает, возможна ошибка в несколько месяцев. Время у «недавно» — когда MindGram последний раз видел сообщение или набор текста от человека.", "The account age is estimated from the ID: Telegram doesn't share it, so it can be off by a few months. The time for \"recently\" is when MindGram last saw a message or typing from that person.") }
+    var profileFooter: String { return t("Дата регистрации примерная.", "The account age is approximate.") }
 
     // Вкладки
     var hideCallsTab: String { return t("Скрыть вкладку «Звонки»", "Hide Calls Tab") }
@@ -133,7 +136,7 @@ public struct MindGramStrings {
 
     // Liquid Glass
     var glassHeader: String { return t("ПРЕВЬЮ", "PREVIEW") }
-    var glassFooter: String { return t("Стекло .clear пропускает обои чата насквозь.", "The .clear glass lets the chat wallpaper show through.") }
+    var glassFooter: String { return t("Стекло пропускает обои чата.", "The glass lets the wallpaper through.") }
 
     // Разделы меню
     func hideSection(_ name: String) -> String { return t("Скрыть «\(name)»", "Hide \"\(name)\"") }
@@ -161,6 +164,8 @@ public struct MindGramStrings {
             return t("Скрыть прослушивание", "Hide Listening")
         case .anonymousStories:
             return t("Анонимный просмотр историй", "Anonymous Story Viewing")
+        case .readAfterActions:
+            return t("Прочитывать после действий", "Read After Actions")
         case .chatListButton:
             return t("Кнопка в списке чатов", "Button in Chat List")
         }
@@ -179,6 +184,8 @@ public struct MindGramStrings {
             return t("Голосовые и кружки не прослушаны", "Voice and round stay unplayed")
         case .anonymousStories:
             return t("Вас нет в списке зрителей", "You're not in the viewers list")
+        case .readAfterActions:
+            return t("Ответ, медиа или реакция читают чат", "A reply, media or reaction reads the chat")
         case .chatListButton:
             return t("Призрак вкл/выкл одним тапом", "Ghost on/off in one tap")
         }
@@ -188,11 +195,11 @@ public struct MindGramStrings {
     var ghostOnlySelectedInfo: String { return t("Призрак в отдельных чатах", "Ghost in specific chats") }
     var ghostChats: String { return t("Чаты с призраком", "Ghost Chats") }
     var ghostExceptions: String { return t("Исключения", "Exceptions") }
-    var ghostWhereFooter: String { return t("В исключениях люди видят ваш настоящий статус: прочтение, набор текста и запись. Онлайн скрывается для всех сразу, поэтому в режиме выбранных чатов он виден.", "People in exceptions see your real status: read receipts, typing and recording. Online is hidden for everyone at once, so with selected chats it stays visible.") }
-    var ghostFooter: String { return t("Чтобы отметить чат прочитанным вручную, зажмите его в списке чатов и нажмите «Отправить прочтение».", "To mark a chat as read manually, press and hold it in the chat list and tap \"Send Read Receipt\".") }
+    var ghostWhereFooter: String { return t("Исключения видят ваш настоящий статус.", "Exceptions see your real status.") }
+    var ghostFooter: String { return t("Прочитать чат вручную: зажмите его в списке чатов.", "To mark a chat read, press and hold it in the chat list.") }
     var ghostAddChat: String { return t("Добавить чат", "Add Chat") }
-    var ghostChatsFooter: String { return t("Режим призрака работает только в этих чатах. Смахните влево, чтобы убрать.", "Ghost mode works only in these chats. Swipe left to remove.") }
-    var ghostExceptionsFooter: String { return t("Эти чаты видят ваше прочтение, набор текста и запись. Смахните влево, чтобы убрать.", "These chats see your read receipts, typing and recording. Swipe left to remove.") }
+    var ghostChatsFooter: String { return t("Призрак работает только в этих чатах.", "Ghost mode works only in these chats.") }
+    var ghostExceptionsFooter: String { return t("Эти чаты видят прочтение и набор текста.", "These chats see read receipts and typing.") }
 
     // Отчёт
     var report: String { return t("Отчёт", "Report") }
@@ -202,7 +209,7 @@ public struct MindGramStrings {
     var reportSendToSaved: String { return t("Отправить в Избранное", "Send to Saved Messages") }
     var reportSendToChat: String { return t("Отправить в чат…", "Send to Chat…") }
     var reportClearErrors: String { return t("Очистить ошибки", "Clear Errors") }
-    var reportFooter: String { return t("Отчёт уходит файлом .txt: кратко что работает и что нет, затем каждая функция словами и кодом — значения, файлы Swift и точные ошибки.", "The report is sent as a .txt file: a short summary, then every feature in words and in code — values, Swift files and exact errors.") }
+    var reportFooter: String { return t("Отчёт уходит файлом .txt.", "The report is sent as a .txt file.") }
     var reportStatus: String { return t("Состояние", "Status") }
     var reportInWords: String { return t("СЛОВАМИ", "IN WORDS") }
     var reportInCode: String { return t("В КОДЕ", "IN CODE") }

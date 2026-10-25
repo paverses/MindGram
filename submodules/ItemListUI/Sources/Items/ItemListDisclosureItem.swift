@@ -59,6 +59,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem, ListItemCompone
     let titleFont: ItemListDisclosureItemTitleFont
     let titleIcon: UIImage?
     let titleBadge: String?
+    let titleBadgeAction: (() -> Void)?
     let enabled: Bool
     let label: String
     let attributedLabel: NSAttributedString?
@@ -87,6 +88,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem, ListItemCompone
         titleFont: ItemListDisclosureItemTitleFont = .regular,
         titleIcon: UIImage? = nil,
         titleBadge: String? = nil,
+        titleBadgeAction: (() -> Void)? = nil,
         label: String,
         attributedLabel: NSAttributedString? = nil,
         labelStyle: ItemListDisclosureLabelStyle = .text,
@@ -112,6 +114,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem, ListItemCompone
         self.titleFont = titleFont
         self.titleIcon = titleIcon
         self.titleBadge = titleBadge
+        self.titleBadgeAction = titleBadgeAction
         self.enabled = enabled
         self.labelStyle = labelStyle
         self.label = label
@@ -792,6 +795,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                             titleBadgeNode = ASImageNode()
                             strongSelf.titleBadgeNode = titleBadgeNode
                             strongSelf.addSubnode(titleBadgeNode)
+                            titleBadgeNode.isUserInteractionEnabled = true
+                            titleBadgeNode.hitTestSlop = UIEdgeInsets(top: -12.0, left: -10.0, bottom: -12.0, right: -10.0)
+                            titleBadgeNode.view.addGestureRecognizer(UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.titleBadgeTapped)))
                             
                             titleBadgeNode.image = generateFilledRoundedRectImage(size: CGSize(width: 16.0, height: 16.0), cornerRadius: 5.0, color: item.presentationData.theme.list.itemCheckColors.fillColor)?.stretchableImage(withLeftCapWidth: 6, topCapHeight: 6)
                         }
@@ -923,6 +929,10 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
+    @objc private func titleBadgeTapped() {
+        self.item?.titleBadgeAction?()
+    }
+
     override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         

@@ -94,6 +94,7 @@ swift_library(
         "//submodules/PhotoResources",
         "//submodules/PremiumUI",
         "//submodules/PresentationDataUtils",
+        "//submodules/PromptUI",
         "//submodules/QrCode",
         "//submodules/QrCodeUI",
         "//submodules/RadialStatusNode",

@@ -534,6 +534,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         case fake
         case scam
         case emojiStatus(PeerEmojiStatus)
+        case mindGramMark(MindGramMarks.Kind)
     }
     
     private var currentCredibilityIcon: CredibilityIcon?
@@ -682,6 +683,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             if let verificationIconFileId = peer.verificationIconFileId {
                 verifiedIcon = .emojiStatus(PeerEmojiStatus(content: .emoji(fileId: verificationIconFileId), expirationDate: nil))
+            }
+            if let mark = MindGramMarks.mark(peerId: peer.id.id._internalGetInt64Value()) {
+                verifiedIcon = .mindGramMark(mark)
             }
         }
         
@@ -980,6 +984,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 currentEmojiStatus = emojiStatus
                 emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
                 emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: navigationContentsAccentColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
+            case .mindGramMark:
+                emojiRegularStatusContent = .none
+                emojiExpandedStatusContent = .none
             }
             
             let iconSize = self.titleCredibilityIconView.update(
@@ -1147,6 +1154,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case let .emojiStatus(emojiStatus):
                 emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
                 emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: navigationContentsAccentColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
+            case let .mindGramMark(mark):
+                emojiRegularStatusContent = .image(image: MindGramMarks.image(mark, size: 22.0), tintColor: peer?.effectiveProfileColor != nil ? .white : presentationData.theme.list.itemPrimaryTextColor)
+                emojiExpandedStatusContent = .image(image: MindGramMarks.image(mark, size: 22.0), tintColor: navigationContentsAccentColor)
             default:
                 emojiRegularStatusContent = .none
                 emojiExpandedStatusContent = .none

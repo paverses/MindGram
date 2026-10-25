@@ -535,6 +535,8 @@ private struct NotificationContent: CustomStringConvertible {
     
     var isLockedMessage: String?
     
+    var mindGramSuppressed = false
+
     init(isLockedMessage: String?) {
         self.isLockedMessage = isLockedMessage
     }
@@ -614,6 +616,9 @@ private struct NotificationContent: CustomStringConvertible {
     }
 
     func generate() -> UNNotificationContent {
+        if self.mindGramSuppressed {
+            return UNNotificationContent()
+        }
         var content = UNMutableNotificationContent()
         
         //Logger.shared.log("NotificationService", "Generating final content: \(self.description)")
@@ -935,6 +940,14 @@ private final class NotificationServiceHandler {
                 updateCurrentContent(content)
                 completed()
 
+                return
+            }
+
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: rootPath + "/mindgram-hidden-accounts.json")), let hiddenIds = (try? JSONSerialization.jsonObject(with: data)) as? [NSNumber], hiddenIds.contains(where: { $0.int64Value == recordId.int64 }) {
+                var content = NotificationContent(isLockedMessage: nil)
+                content.mindGramSuppressed = true
+                updateCurrentContent(content)
+                completed()
                 return
             }
 

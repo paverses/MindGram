@@ -1,146 +1,131 @@
 import Foundation
 import UIKit
 
-/// «Бейдж в вырезе»: the small label under the notch or Dynamic Island. Telegram's own artwork, or one of
-/// MindGram's, drawn here at the same 93 x 22 pt so it sits in the same place.
 public enum MindGramBadge {
     public enum Style: String, CaseIterable {
-        case telegram
-        case logo
-        case logoText
-        case text
-        case gradient
-        case neon
+        case classic
+        case dark
+        case darkPurple
+        case purple
+        case green
+        case pink
+        case red
         case gold
-        case aurora
-        case monogram
-        case sparkles
 
         public func title(isRussian: Bool) -> String {
             switch self {
-            case .telegram:
-                return isRussian ? "Как в Telegram" : "Telegram's"
-            case .logo:
-                return isRussian ? "Логотип" : "Logo"
-            case .logoText:
-                return isRussian ? "Логотип и имя" : "Logo and Name"
-            case .text:
-                return "MindGram"
-            case .gradient:
-                return isRussian ? "Градиент" : "Gradient"
-            case .neon:
-                return isRussian ? "Неон" : "Neon"
+            case .classic:
+                return isRussian ? "Классический" : "Classic"
+            case .dark:
+                return isRussian ? "Тёмный" : "Dark"
+            case .darkPurple:
+                return isRussian ? "Тёмно-фиолетовый" : "Dark Purple"
+            case .purple:
+                return isRussian ? "Фиолетовый" : "Purple"
+            case .green:
+                return isRussian ? "Зелёный" : "Green"
+            case .pink:
+                return isRussian ? "Розовый" : "Pink"
+            case .red:
+                return isRussian ? "Красный" : "Red"
             case .gold:
-                return isRussian ? "Золото" : "Gold"
-            case .aurora:
-                return isRussian ? "Северное сияние" : "Aurora"
-            case .monogram:
-                return isRussian ? "Монограмма MG" : "MG Monogram"
-            case .sparkles:
-                return isRussian ? "Искры" : "Sparkles"
+                return isRussian ? "Золотой" : "Gold"
+            }
+        }
+
+        var colors: (top: UIColor, bottom: UIColor, glow: UIColor)? {
+            func rgb(_ value: UInt32) -> UIColor {
+                return UIColor(red: CGFloat((value >> 16) & 0xff) / 255.0, green: CGFloat((value >> 8) & 0xff) / 255.0, blue: CGFloat(value & 0xff) / 255.0, alpha: 1.0)
+            }
+            switch self {
+            case .classic:
+                return nil
+            case .dark:
+                return (rgb(0x2a2a2e), rgb(0x0a0a0c), rgb(0x8e8e93))
+            case .darkPurple:
+                return (rgb(0x2b1a4a), rgb(0x0d0718), rgb(0x7b4dff))
+            case .purple:
+                return (rgb(0x5b3bc4), rgb(0x241458), rgb(0xb18cff))
+            case .green:
+                return (rgb(0x16613a), rgb(0x062414), rgb(0x3ee08a))
+            case .pink:
+                return (rgb(0xa8336f), rgb(0x3d0f28), rgb(0xff7ac2))
+            case .red:
+                return (rgb(0xa32626), rgb(0x3a0909), rgb(0xff5a4f))
+            case .gold:
+                return (rgb(0x8a5a12), rgb(0x2e1c04), rgb(0xffc64a))
             }
         }
     }
 
     public static var style: Style {
-        get { return Style(rawValue: UserDefaults.standard.string(forKey: "MindGram.badge.style") ?? "") ?? .telegram }
+        get { return Style(rawValue: UserDefaults.standard.string(forKey: "MindGram.badge.style") ?? "") ?? .classic }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: "MindGram.badge.style")
             NotificationCenter.default.post(name: MindGramSettings.didChangeNotification, object: nil)
         }
     }
 
-    public static let size = CGSize(width: 93.0, height: 22.0)
+    public static let size = CGSize(width: 186.0, height: 44.0)
 
-    /// The badge for `style`; nil for `.telegram` (the app keeps its bundled image).
+    private static var cache: [Style: UIImage] = [:]
+
     public static func image(_ style: Style) -> UIImage? {
-        let size = self.size
-        switch style {
-        case .telegram:
-            return nil
-        case .logo:
-            return MindGramLogo.image(size: size, color: .white, inset: 4.0)
-        case .logoText:
-            return UIGraphicsImageRenderer(size: size).image { _ in
-                let text = self.attributed("MindGram", size: 13.0, color: .white)
-                let logoSize = CGSize(width: 12.0 * MindGramLogo.aspectRatio, height: 12.0)
-                let totalWidth = logoSize.width + 5.0 + text.size().width
-                let x = (size.width - totalWidth) / 2.0
-                UIColor.white.setFill()
-                MindGramLogo.path(in: CGRect(x: x, y: (size.height - logoSize.height) / 2.0, width: logoSize.width, height: logoSize.height)).fill()
-                text.draw(at: CGPoint(x: x + logoSize.width + 5.0, y: (size.height - text.size().height) / 2.0))
-            }
-        case .text:
-            return self.textBadge("MindGram", fill: { _ in UIColor.white.setFill() })
-        case .gradient:
-            return self.gradientText("MindGram", colors: [UIColor(red: 0.62, green: 0.4, blue: 1.0, alpha: 1.0), UIColor(red: 0.25, green: 0.6, blue: 1.0, alpha: 1.0)])
-        case .gold:
-            return self.gradientText("MindGram", colors: [UIColor(red: 1.0, green: 0.86, blue: 0.45, alpha: 1.0), UIColor(red: 0.85, green: 0.6, blue: 0.2, alpha: 1.0)])
-        case .aurora:
-            return self.gradientText("MindGram", colors: [UIColor(red: 0.3, green: 1.0, blue: 0.75, alpha: 1.0), UIColor(red: 0.35, green: 0.55, blue: 1.0, alpha: 1.0), UIColor(red: 0.85, green: 0.45, blue: 1.0, alpha: 1.0)])
-        case .neon:
-            return UIGraphicsImageRenderer(size: size).image { context in
-                let color = UIColor(red: 0.3, green: 0.95, blue: 1.0, alpha: 1.0)
-                context.cgContext.setShadow(offset: .zero, blur: 4.0, color: color.cgColor)
-                let text = self.attributed("MindGram", size: 13.0, color: color)
-                text.draw(at: CGPoint(x: (size.width - text.size().width) / 2.0, y: (size.height - text.size().height) / 2.0))
-            }
-        case .monogram:
-            return UIGraphicsImageRenderer(size: size).image { _ in
-                let pill = CGRect(x: (size.width - 34.0) / 2.0, y: 2.0, width: 34.0, height: size.height - 4.0)
-                UIColor(white: 1.0, alpha: 0.18).setFill()
-                UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2.0).fill()
-                let text = self.attributed("MG", size: 12.0, color: .white, weight: .heavy)
-                text.draw(at: CGPoint(x: pill.midX - text.size().width / 2.0, y: pill.midY - text.size().height / 2.0))
-            }
-        case .sparkles:
-            return UIGraphicsImageRenderer(size: size).image { _ in
-                let text = self.attributed("✦ MindGram ✦", size: 12.0, color: UIColor(red: 1.0, green: 0.92, blue: 0.6, alpha: 1.0))
-                text.draw(at: CGPoint(x: (size.width - text.size().width) / 2.0, y: (size.height - text.size().height) / 2.0))
-                UIColor(white: 1.0, alpha: 0.7).setFill()
-                for point in [CGPoint(x: 6.0, y: 4.0), CGPoint(x: 86.0, y: 16.0), CGPoint(x: 14.0, y: 17.0), CGPoint(x: 80.0, y: 5.0)] {
-                    UIBezierPath(ovalIn: CGRect(x: point.x, y: point.y, width: 1.6, height: 1.6)).fill()
-                }
-            }
+        if let image = self.cache[style] {
+            return image
         }
+        let image = self.render(style)
+        self.cache[style] = image
+        return image
     }
 
-    /// The image the window shows now.
     public static var currentImage: UIImage? {
         return self.image(self.style)
     }
 
-    private static func attributed(_ text: String, size: CGFloat, color: UIColor, weight: UIFont.Weight = .semibold) -> NSAttributedString {
-        return NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: size, weight: weight), .foregroundColor: color, .kern: 0.2])
-    }
-
-    private static func textBadge(_ text: String, fill: (CGContext) -> Void) -> UIImage {
+    private static func render(_ style: Style) -> UIImage {
         let size = self.size
-        return UIGraphicsImageRenderer(size: size).image { context in
-            fill(context.cgContext)
-            let string = self.attributed(text, size: 13.0, color: .white)
-            string.draw(at: CGPoint(x: (size.width - string.size().width) / 2.0, y: (size.height - string.size().height) / 2.0))
-        }
-    }
-
-    /// Text filled with a horizontal gradient (drawn as a mask).
-    private static func gradientText(_ text: String, colors: [UIColor]) -> UIImage? {
-        let size = self.size
-        let mask = UIGraphicsImageRenderer(size: size).image { _ in
-            let string = self.attributed(text, size: 13.0, color: .white, weight: .bold)
-            string.draw(at: CGPoint(x: (size.width - string.size().width) / 2.0, y: (size.height - string.size().height) / 2.0))
-        }
-        guard let maskImage = mask.cgImage else {
-            return mask
-        }
         return UIGraphicsImageRenderer(size: size).image { context in
             let cg = context.cgContext
-            cg.translateBy(x: 0.0, y: size.height)
-            cg.scaleBy(x: 1.0, y: -1.0)
-            cg.clip(to: CGRect(origin: CGPoint(), size: size), mask: maskImage)
-            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors.map(\.cgColor) as CFArray, locations: nil) {
-                cg.drawLinearGradient(gradient, start: CGPoint(x: 10.0, y: 0.0), end: CGPoint(x: size.width - 10.0, y: 0.0), options: [])
+            let pillRect = CGRect(origin: CGPoint(), size: size).insetBy(dx: 2.0, dy: 2.0)
+            let pill = UIBezierPath(roundedRect: pillRect, cornerRadius: pillRect.height / 2.0)
+            let colors = style.colors
+
+            if let colors {
+                cg.saveGState()
+                pill.addClip()
+                if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [colors.top.cgColor, colors.bottom.cgColor] as CFArray, locations: [0.0, 1.0]) {
+                    cg.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: pillRect.minY), end: CGPoint(x: 0.0, y: pillRect.maxY), options: [])
+                }
+                cg.restoreGState()
+                cg.saveGState()
+                cg.setShadow(offset: .zero, blur: 4.0, color: colors.glow.withAlphaComponent(0.9).cgColor)
+                colors.glow.withAlphaComponent(0.85).setStroke()
+                pill.lineWidth = 1.5
+                pill.stroke()
+                cg.restoreGState()
+            } else {
+                UIColor.black.setFill()
+                pill.fill()
             }
+
+            let font = UIFont(name: "Unbounded-Bold", size: 20.0) ?? UIFont.systemFont(ofSize: 21.0, weight: .heavy)
+            let text = NSAttributedString(string: "indGram", attributes: [.font: font, .foregroundColor: UIColor.white, .kern: 0.3])
+            let textSize = text.size()
+            let logoHeight: CGFloat = 16.0
+            let logoSize = CGSize(width: logoHeight * MindGramLogo.aspectRatio, height: logoHeight)
+            let spacing: CGFloat = 1.5
+            let totalWidth = logoSize.width + spacing + textSize.width
+            let originX = floor((size.width - totalWidth) / 2.0)
+
+            cg.saveGState()
+            if let colors {
+                cg.setShadow(offset: .zero, blur: 6.0, color: colors.glow.cgColor)
+            }
+            UIColor.white.setFill()
+            MindGramLogo.path(in: CGRect(x: originX, y: floor((size.height - logoSize.height) / 2.0), width: logoSize.width, height: logoSize.height)).fill()
+            text.draw(at: CGPoint(x: originX + logoSize.width + spacing, y: floor((size.height - textSize.height) / 2.0)))
+            cg.restoreGState()
         }
     }
 }

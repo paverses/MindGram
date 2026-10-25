@@ -7,6 +7,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import TextFormat
+import ComponentFlow
 
 /// How a status row is colored: works, off, problem.
 enum MindGramStatusTone: Int {
@@ -35,17 +36,19 @@ enum MindGramListEntry: ItemListNodeEntry {
     case value(id: Int32, section: ItemListSectionId, title: String, value: String)
     /// A title with a few lines of detail under it (history rows); tapping calls `open`.
     case detail(id: Int32, section: ItemListSectionId, title: String, detail: String)
+    case betaDisclosure(id: Int32, section: ItemListSectionId, title: String, icon: String)
+    case toggleEx(id: Int32, section: ItemListSectionId, title: String, info: String, value: Bool, enabled: Bool, beta: Bool)
 
     var section: ItemListSectionId {
         switch self {
-        case let .header(_, section, _), let .toggle(_, section, _, _, _), let .disclosure(_, section, _, _), let .footer(_, section, _), let .custom(_, section, _, _), let .status(_, section, _, _, _), let .action(_, section, _), let .text(_, section, _, _), let .check(_, section, _, _), let .value(_, section, _, _), let .detail(_, section, _, _):
+        case let .header(_, section, _), let .toggle(_, section, _, _, _), let .disclosure(_, section, _, _), let .footer(_, section, _), let .custom(_, section, _, _), let .status(_, section, _, _, _), let .action(_, section, _), let .text(_, section, _, _), let .check(_, section, _, _), let .value(_, section, _, _), let .detail(_, section, _, _), let .betaDisclosure(_, section, _, _), let .toggleEx(_, section, _, _, _, _, _):
             return section
         }
     }
 
     var stableId: Int32 {
         switch self {
-        case let .header(id, _, _), let .toggle(id, _, _, _, _), let .disclosure(id, _, _, _), let .footer(id, _, _), let .custom(id, _, _, _), let .status(id, _, _, _, _), let .action(id, _, _), let .text(id, _, _, _), let .check(id, _, _, _), let .value(id, _, _, _), let .detail(id, _, _, _):
+        case let .header(id, _, _), let .toggle(id, _, _, _, _), let .disclosure(id, _, _, _), let .footer(id, _, _), let .custom(id, _, _, _), let .status(id, _, _, _, _), let .action(id, _, _), let .text(id, _, _, _), let .check(id, _, _, _), let .value(id, _, _, _), let .detail(id, _, _, _), let .betaDisclosure(id, _, _, _), let .toggleEx(id, _, _, _, _, _, _):
             return id
         }
     }
@@ -66,6 +69,18 @@ enum MindGramListEntry: ItemListNodeEntry {
         case let .disclosure(id, section, title, icon):
             return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: arguments.icon(icon), title: title, label: "", sectionId: section, style: .blocks, action: {
                 arguments.open(id)
+            })
+        case let .betaDisclosure(id, section, title, icon):
+            return ItemListDisclosureItem(presentationData: presentationData, systemStyle: .glass, icon: arguments.icon(icon), title: title, titleBadge: "BETA", titleBadgeAction: {
+                arguments.presentBeta?()
+            }, label: "", sectionId: section, style: .blocks, action: {
+                arguments.open(id)
+            })
+        case let .toggleEx(id, section, title, info, value, enabled, beta):
+            return ItemListSwitchItem(presentationData: presentationData, systemStyle: .glass, title: title, text: info.isEmpty ? nil : info, titleBadgeComponent: beta ? AnyComponent(MindGramBetaBadgeComponent(theme: presentationData.theme, action: {
+                arguments.presentBeta?()
+            })) : nil, value: value && enabled, enabled: enabled, sectionId: section, style: .blocks, updated: { value in
+                arguments.toggle(id, value)
             })
         case let .footer(_, section, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: section)
@@ -111,6 +126,7 @@ final class MindGramListArguments {
     let open: (Int32) -> Void
     let icon: (String) -> UIImage?
     let customItem: (String, ItemListPresentationData, ItemListSectionId) -> ListViewItem
+    var presentBeta: (() -> Void)?
 
     init(
         toggle: @escaping (Int32, Bool) -> Void = { _, _ in },
@@ -146,5 +162,10 @@ func mindGramListController(
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries(presentationData, strings), style: .blocks, animateChanges: false)
         return (controllerState, (listState, arguments))
     }
-    return ItemListController(context: context, state: signal)
+    let controller = ItemListController(context: context, state: signal)
+    arguments.presentBeta = { [weak controller] in
+        let strings = MindGramStrings(context.sharedContext.currentPresentationData.with { $0 })
+        controller?.present(textAlertController(context: context, title: "BETA", text: strings.betaText, actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {})]), in: .window(.root))
+    }
+    return controller
 }

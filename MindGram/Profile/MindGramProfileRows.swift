@@ -24,6 +24,14 @@ public func mindGramProfileRows(peer: EnginePeer, accountPeerId: EnginePeer.Id, 
     let strings = MindGramStrings(presentationData)
     var rows: [MindGramProfileRow] = []
 
+    if case .user = peer, MindGramBetaTesters.isBetaTester(peer.id.id._internalGetInt64Value()) {
+        rows.append(MindGramProfileRow(key: "beta", label: strings.t("Статус MindGram", "MindGram Status"), value: "Beta Tester", copyValue: nil))
+    }
+
+    if let mark = MindGramMarks.mark(peerId: peer.id.id._internalGetInt64Value()) {
+        rows.append(MindGramProfileRow(key: "mark", label: strings.t("Метка", "Mark"), value: mark.confirmedText(isRussian: strings.isRussian), copyValue: nil))
+    }
+
     if MindGramSettings.isOn(.showPeerId) {
         let rawId = peer.id.id._internalGetInt64Value()
         let shownId: String

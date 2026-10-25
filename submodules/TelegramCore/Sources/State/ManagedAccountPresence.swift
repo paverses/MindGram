@@ -18,10 +18,25 @@ private final class AccountPresenceManagerImpl {
     private var onlineTimer: SignalKitTimer?
     
     private var wasOnline: Bool = false
+    private var mindGramGhostObserver: NSObjectProtocol?
+    private var mindGramGhostHidesOnline = false
     
     init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
         self.queue = queue
         self.network = network
+        self.mindGramGhostHidesOnline = MindGramGhost.applies(.hideOnline, peerId: nil)
+        self.mindGramGhostObserver = NotificationCenter.default.addObserver(forName: MindGramGhost.didChangeNotification, object: nil, queue: nil, using: { [weak self] _ in
+            queue.async {
+                guard let self else {
+                    return
+                }
+                let hidesOnline = MindGramGhost.applies(.hideOnline, peerId: nil)
+                if self.mindGramGhostHidesOnline != hidesOnline {
+                    self.mindGramGhostHidesOnline = hidesOnline
+                    self.updatePresence(self.wasOnline)
+                }
+            }
+        })
         
         self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
         |> distinctUntilChanged
@@ -41,11 +56,15 @@ private final class AccountPresenceManagerImpl {
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
         self.onlineTimer?.invalidate()
+        if let mindGramGhostObserver = self.mindGramGhostObserver {
+            NotificationCenter.default.removeObserver(mindGramGhostObserver)
+        }
     }
     
     private func updatePresence(_ isOnline: Bool) {
         // MindGram: ghost mode "Скрыть «в сети»" always reports offline.
-        let isOnline = isOnline && !MindGramGhost.blocks(.hideOnline, peerId: nil)
+        let ghostOffline = isOnline && MindGramGhost.blocks(.hideOnline, peerId: nil)
+        let isOnline = isOnline && !ghostOffline
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
             let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
@@ -60,6 +79,16 @@ private final class AccountPresenceManagerImpl {
         } else {
             self.onlineTimer?.invalidate()
             self.onlineTimer = nil
+            if ghostOffline {
+                let timer = SignalKitTimer(timeout: 20.0, repeat: false, completion: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.updatePresence(self.wasOnline)
+                }, queue: self.queue)
+                self.onlineTimer = timer
+                timer.start()
+            }
             request = self.network.request(Api.functions.account.updateStatus(offline: .boolTrue))
         }
         self.isPerformingUpdate.set(true)

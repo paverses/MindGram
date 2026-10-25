@@ -1,4 +1,5 @@
 import Foundation
+import PromptUI
 import UIKit
 import TelegramCore
 import AsyncDisplayKit
@@ -2510,17 +2511,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
                         f(.default)
-                        let alert = UIAlertController(title: isRussian ? "Изменить локально" : "Edit Locally", message: isRussian ? "Текст поменяется только у вас, без пометки «изменено»." : "Only you see the new text, with no \"edited\" mark.", preferredStyle: .alert)
-                        alert.addTextField { field in
-                            field.text = currentText
-                            field.clearButtonMode = .whileEditing
-                        }
-                        alert.addAction(UIAlertAction(title: isRussian ? "Отмена" : "Cancel", style: .cancel))
-                        alert.addAction(UIAlertAction(title: isRussian ? "Сохранить" : "Save", style: .default, handler: { [weak alert] _ in
-                            MindGramLocalEdits.set(messageKey, text: alert?.textFields?.first?.text)
+                        controllerInteraction.presentController(promptController(context: context, text: isRussian ? "Изменить локально" : "Edit Locally", subtitle: isRussian ? "Текст поменяется только у вас." : "Only you see the new text.", value: currentText, characterLimit: 4096, apply: { text in
+                            guard let text else {
+                                return
+                            }
+                            MindGramLocalEdits.set(messageKey, text: text)
                             controllerInteraction.requestMessageUpdate(messageId, false, nil)
-                        }))
-                        controllerInteraction.navigationController()?.present(alert, animated: true)
+                        }), nil)
                     })))
                     if hasLocalText {
                         subItems.append(.action(ContextMenuActionItem(text: isRussian ? "Вернуть оригинал" : "Restore Original", icon: { theme in

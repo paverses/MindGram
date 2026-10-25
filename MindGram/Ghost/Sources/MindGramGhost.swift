@@ -16,6 +16,7 @@ public enum MindGramGhost {
         case hideListening
         /// Watch stories without being listed as a viewer.
         case anonymousStories
+        case readAfterActions
         /// Show the ghost button in the chat list.
         case chatListButton
     }

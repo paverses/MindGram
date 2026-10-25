@@ -102,6 +102,28 @@ public enum MindGramTextStyle {
         return !self.formats.isEmpty || self.font != .normal
     }
 
+    public static func letterFormats(for text: String, formats: Set<Format>) -> [(range: Range<Int>, format: Format)] {
+        let pool = Format.allCases.filter { formats.contains($0) && $0 != .quote }
+        guard pool.count >= 2 else {
+            return []
+        }
+        var result: [(range: Range<Int>, format: Format)] = []
+        var offset = 0
+        var previous: Format?
+        for character in text {
+            let length = String(character).utf16.count
+            if !character.isWhitespace {
+                let choices = pool.filter { $0 != previous }
+                if let format = choices.randomElement() {
+                    result.append((offset ..< offset + length, format))
+                    previous = format
+                }
+            }
+            offset += length
+        }
+        return result
+    }
+
     // MARK: Fonts
 
     private static let lookalikes: [Character: Character] = [

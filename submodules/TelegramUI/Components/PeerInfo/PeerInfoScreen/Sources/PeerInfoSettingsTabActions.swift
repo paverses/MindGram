@@ -15,8 +15,10 @@ import EmojiStatusComponent
 import SettingsUI
 
 extension PeerInfoScreenNode {
-    func accountContextMenuItems(context: AccountContext, logout: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
+    func accountContextMenuItems(context: AccountContext, visibleIds: [Int64] = [], logout: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
+        let isRussian = ["ru", "uk", "be"].contains(where: { strings.baseLanguageCode.hasPrefix($0) })
+        let accountId = context.account.id.int64
         return context.engine.messages.unreadChatListPeerIds(groupId: .root, filterPredicate: nil)
         |> map { unreadChatListPeerIds -> [ContextMenuItem] in
             var items: [ContextMenuItem] = []
@@ -30,6 +32,27 @@ extension PeerInfoScreenNode {
                 })))
             }
             
+            if visibleIds.count > 1, let index = visibleIds.firstIndex(of: accountId) {
+                if index > 0 {
+                    items.append(.action(ContextMenuActionItem(text: isRussian ? "Переместить выше" : "Move Up", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Expand"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                        f(.default)
+                        MindGramAccounts.move(accountId, by: -1, currentIds: visibleIds)
+                    })))
+                }
+                if index < visibleIds.count - 1 {
+                    items.append(.action(ContextMenuActionItem(text: isRussian ? "Переместить ниже" : "Move Down", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Collapse"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                        f(.default)
+                        MindGramAccounts.move(accountId, by: 1, currentIds: visibleIds)
+                    })))
+                }
+            }
+            if !visibleIds.isEmpty {
+                items.append(.action(ContextMenuActionItem(text: isRussian ? "Скрыть" : "Hide", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    f(.default)
+                    MindGramAccounts.setHidden(accountId, true)
+                })))
+            }
+
             items.append(.action(ContextMenuActionItem(text: strings.Settings_Context_Logout, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                 logout()
                 f(.default)
@@ -41,9 +64,11 @@ extension PeerInfoScreenNode {
     
     func accountContextMenu(id: AccountRecordId, node: ASDisplayNode, gesture: ContextGesture?) {
         var selectedAccount: Account?
+        var visibleIds: [Int64] = []
         let _ = (self.accountsAndPeers.get()
         |> take(1)
         |> deliverOnMainQueue).startStandalone(next: { accountsAndPeers in
+            visibleIds = MindGramAccounts.sorted(accountsAndPeers.map { $0.0.account.id.int64 }.filter { !MindGramAccounts.isHidden($0) }, id: { $0 })
             for (account, _, _) in accountsAndPeers {
                 if account.account.id == id {
                     selectedAccount = account.account
@@ -55,7 +80,7 @@ extension PeerInfoScreenNode {
             let accountContext = self.context.sharedContext.makeTempAccountContext(account: selectedAccount)
             let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, location: .chatList(groupId: EngineChatList.Group(.root)), controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
                     
-            let contextController = makeContextController(presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: accountContextMenuItems(context: accountContext, logout: { [weak self] in
+            let contextController = makeContextController(presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: accountContextMenuItems(context: accountContext, visibleIds: visibleIds, logout: { [weak self] in
                 self?.logoutAccount(id: id)
             }) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
             self.controller?.presentInGlobalOverlay(contextController)

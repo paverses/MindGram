@@ -29,6 +29,7 @@ swift_library(
         "ChatTools/**/*.swift",
         "Report/**/*.swift",
         "Export/**/*.swift",
+        "Visual/**/*.swift",
     ]),
     copts = [
         "-warnings-as-errors",

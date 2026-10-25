@@ -327,6 +327,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.applicationBindings = applicationBindings
         self.sharedContainerPath = sharedContainerPath
         self.basePath = basePath
+        MindGramAccounts.sharedDirectory = basePath
+        MindGramBetaTesters.start()
         self.networkArguments = networkArguments
         self.accountManager = accountManager
         self.navigateToChatImpl = navigateToChat
@@ -1785,6 +1787,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
+        MindGramAccounts.setHidden(id.int64, false)
         if self.activeAccountsValue?.primary?.account.id == id {
             return
         }

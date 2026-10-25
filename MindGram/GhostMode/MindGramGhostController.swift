@@ -13,6 +13,7 @@ import MindGramCore
 /// What the master switch expands into, in display order.
 private let ghostOptions: [MindGramGhost.Option] = [
     .hideRead,
+    .readAfterActions,
     .hideOnline,
     .hideTyping,
     .hideMediaActivity,

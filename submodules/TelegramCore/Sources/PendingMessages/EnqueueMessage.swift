@@ -728,6 +728,13 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
 }
 
 public func enqueueMessages(account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> Signal<[MessageId?], NoError> {
+    return mindGramTranslatedEnqueueMessages(account: account, peerId: peerId, messages: messages)
+    |> afterNext { _ in
+        mindGramReadAfterAction(account: account, peerId: peerId)
+    }
+}
+
+private func mindGramTranslatedEnqueueMessages(account: Account, peerId: PeerId, messages: [EnqueueMessage]) -> Signal<[MessageId?], NoError> {
     // MindGram: «Переводить мои сообщения» translates own texts before they are sent.
     if let translated = mindGramTranslateOutgoing(peerId: peerId, messages: messages) {
         return translated

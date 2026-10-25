@@ -66,8 +66,57 @@ public enum MindGramSettings {
         return UserDefaults.standard
     }
 
+    public static let classicConflicts: Set<MindGramToggle> = [
+        .glassMessages,
+        .glassProfile,
+        .glassBotButtons,
+        .plusAttachMenu,
+        .quickActionsMenu,
+        .noContextBlur,
+        .largerReactions,
+        .roundProfileButtons,
+        .squareProfileAvatar,
+        .avatarBackdrop
+    ]
+
     public static func isOn(_ toggle: MindGramToggle) -> Bool {
+        if MindGramDesign.isClassic && self.classicConflicts.contains(toggle) {
+            return false
+        }
+        return self.storedValue(toggle)
+    }
+
+    public static func storedValue(_ toggle: MindGramToggle) -> Bool {
         return self.defaults.bool(forKey: "MindGram.toggle.\(toggle.rawValue)")
+    }
+
+    public static func isLockedByClassicDesign(_ toggle: MindGramToggle) -> Bool {
+        return MindGramDesign.isClassicOnNextLaunch && self.classicConflicts.contains(toggle)
+    }
+
+    public static var navbarCustomSize: Bool {
+        get {
+            if let value = self.defaults.object(forKey: "MindGram.navbar.custom") as? Bool {
+                return value
+            }
+            return self.defaults.object(forKey: "MindGram.navbar.height") != nil || self.defaults.object(forKey: "MindGram.navbar.width") != nil
+        }
+        set {
+            self.defaults.set(newValue, forKey: "MindGram.navbar.custom")
+            self.notify()
+        }
+    }
+
+    public static var navbarSizeIsActive: Bool {
+        return self.navbarCustomSize && !MindGramDesign.isClassic
+    }
+
+    public static var storedNavbarHeightPercent: Int {
+        return self.percent(forKey: "MindGram.navbar.height")
+    }
+
+    public static var storedNavbarWidthPercent: Int {
+        return self.percent(forKey: "MindGram.navbar.width")
     }
 
     public static func set(_ toggle: MindGramToggle, _ value: Bool) {
@@ -87,7 +136,7 @@ public enum MindGramSettings {
     /// Height of the bottom tab bar, percent of Telegram's own (50–150, default 100).
     public static var navbarHeightPercent: Int {
         get {
-            return self.percent(forKey: "MindGram.navbar.height")
+            return self.navbarSizeIsActive ? self.percent(forKey: "MindGram.navbar.height") : 100
         }
         set {
             self.defaults.set(min(max(newValue, self.navbarScaleRange.lowerBound), self.navbarScaleRange.upperBound), forKey: "MindGram.navbar.height")
@@ -98,7 +147,7 @@ public enum MindGramSettings {
     /// Width of the bottom tab bar, percent of Telegram's own (50–150, default 100).
     public static var navbarWidthPercent: Int {
         get {
-            return self.percent(forKey: "MindGram.navbar.width")
+            return self.navbarSizeIsActive ? self.percent(forKey: "MindGram.navbar.width") : 100
         }
         set {
             self.defaults.set(min(max(newValue, self.navbarScaleRange.lowerBound), self.navbarScaleRange.upperBound), forKey: "MindGram.navbar.width")

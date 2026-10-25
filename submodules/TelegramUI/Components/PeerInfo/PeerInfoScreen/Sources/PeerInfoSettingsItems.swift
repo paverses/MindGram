@@ -119,7 +119,8 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         }
         
         if !settings.accountsAndPeers.isEmpty {
-            for (peerAccountContext, peer, badgeCount) in settings.accountsAndPeers {
+            let visibleAccounts = MindGramAccounts.sorted(settings.accountsAndPeers.filter { !MindGramAccounts.isHidden($0.0.account.id.int64) }, id: { $0.0.account.id.int64 })
+            for (peerAccountContext, peer, badgeCount) in visibleAccounts {
                 let mappedContext = ItemListPeerItem.Context.custom(ItemListPeerItem.Context.Custom(
                     accountPeerId: peerAccountContext.account.peerId,
                     engine: peerAccountContext.engine,
