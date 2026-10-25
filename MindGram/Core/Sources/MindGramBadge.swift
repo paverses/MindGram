@@ -99,7 +99,6 @@ public enum MindGramBadge {
                 }
                 cg.restoreGState()
                 cg.saveGState()
-                cg.setShadow(offset: .zero, blur: 4.0, color: colors.glow.withAlphaComponent(0.9).cgColor)
                 colors.glow.withAlphaComponent(0.85).setStroke()
                 pill.lineWidth = 1.5
                 pill.stroke()
