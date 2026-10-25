@@ -11,8 +11,9 @@ on:
       runner:
         description: 'macOS runner (macos-15 when macos-26 machines are busy)'
         type: choice
-        default: macos-26
+        default: xcode-27
         options:
+          - xcode-27
           - macos-26
           - macos-15
           - macos-15-intel
@@ -34,7 +35,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ${{ inputs.runner || 'macos-26' }}
+    runs-on: ${{ inputs.runner || 'xcode-27' }}
     timeout-minutes: 360
 
     steps:
@@ -43,7 +44,7 @@ jobs:
           df -h /
           for x in /Applications/Xcode_*.app; do
             case "$x" in
-              *Xcode_26*) ;;
+              *Xcode_26*|*Xcode_27*) ;;
               *) sudo rm -rf "$x" ;;
             esac
           done
@@ -63,7 +64,7 @@ jobs:
           if [ -d "/Applications/Xcode_$WANTED.app" ]; then
             XCODE="/Applications/Xcode_$WANTED.app"
           else
-            XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+            XCODE=$(ls -d /Applications/Xcode_2[67]*.app | sort -V | tail -1)
           fi
           echo "versions.json wants Xcode $WANTED, using $XCODE"
           sudo xcode-select -s "$XCODE/Contents/Developer"
@@ -118,9 +119,9 @@ jobs:
           path: |
             ~/telegram-bazel-cache
             /private/var/tmp/_bazel_runner/cache/repos
-          key: bazel-${{ inputs.runner || 'macos-26' }}-${{ hashFiles('versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: bazel-${{ inputs.runner || 'xcode-27' }}-${{ hashFiles('versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            bazel-${{ inputs.runner || 'macos-26' }}-${{ hashFiles('versions.json') }}-
+            bazel-${{ inputs.runner || 'xcode-27' }}-${{ hashFiles('versions.json') }}-
             bazel-${{ hashFiles('versions.json') }}-
 
       - name: Build
@@ -153,7 +154,7 @@ jobs:
           path: |
             ~/telegram-bazel-cache
             /private/var/tmp/_bazel_runner/cache/repos
-          key: bazel-${{ inputs.runner || 'macos-26' }}-${{ hashFiles('versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: bazel-${{ inputs.runner || 'xcode-27' }}-${{ hashFiles('versions.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Collect IPA
         run: |
