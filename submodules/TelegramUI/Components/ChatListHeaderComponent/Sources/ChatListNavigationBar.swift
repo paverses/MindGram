@@ -236,6 +236,9 @@ public final class ChatListNavigationBar: Component {
 
     public final class View: UIView {
         private let edgeEffectView: EdgeEffectView
+        private var mindGramClassicBackground: UIVisualEffectView?
+        private var mindGramClassicTint: UIView?
+        private var mindGramClassicSeparator: UIView?
 
         // Layout remains in navigation bar coordinates when this view is hosted externally.
         public var edgeEffectBackgroundView: UIView {
@@ -588,6 +591,40 @@ public final class ChatListNavigationBar: Component {
             let edgeEffectFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: currentLayout.size.width, height: edgeEffectHeight))
             transition.setFrame(view: self.edgeEffectView, frame: edgeEffectFrame)
             self.edgeEffectView.update(content: nil, blur: true, alpha: ChatListNavigationBar.View.edgeEffectTintAlpha, rect: edgeEffectFrame, edge: .top, edgeSize: min(ChatListNavigationBar.View.edgeEffectEdgeLength, edgeEffectHeight), transition: transition)
+            if MindGramDesign.isClassic {
+                let background: UIVisualEffectView
+                let tint: UIView
+                let separator: UIView
+                if let current = self.mindGramClassicBackground, let currentTint = self.mindGramClassicTint, let currentSeparator = self.mindGramClassicSeparator {
+                    background = current
+                    tint = currentTint
+                    separator = currentSeparator
+                } else {
+                    background = UIVisualEffectView(effect: nil)
+                    background.isUserInteractionEnabled = false
+                    tint = UIView()
+                    tint.isUserInteractionEnabled = false
+                    separator = UIView()
+                    separator.isUserInteractionEnabled = false
+                    background.contentView.addSubview(tint)
+                    self.contentView.insertSubview(background, aboveSubview: self.edgeEffectView)
+                    self.contentView.insertSubview(separator, aboveSubview: background)
+                    self.mindGramClassicBackground = background
+                    self.mindGramClassicTint = tint
+                    self.mindGramClassicSeparator = separator
+                }
+                let navigationBarTheme = component.theme.rootController.navigationBar
+                background.effect = UIBlurEffect(style: component.theme.overallDarkAppearance ? .dark : .light)
+                tint.backgroundColor = navigationBarTheme.blurredBackgroundColor
+                separator.backgroundColor = navigationBarTheme.separatorColor
+                let classicHeight = max(0.0, edgeEffectHeight - 14.0)
+                let classicFrame = CGRect(origin: CGPoint(x: 0.0, y: -200.0), size: CGSize(width: currentLayout.size.width, height: 200.0 + classicHeight))
+                transition.setFrame(view: background, frame: classicFrame)
+                transition.setFrame(view: tint, frame: CGRect(origin: CGPoint(), size: classicFrame.size))
+                transition.setFrame(view: separator, frame: CGRect(origin: CGPoint(x: 0.0, y: classicHeight), size: CGSize(width: currentLayout.size.width, height: UIScreenPixel)))
+                background.isHidden = !component.hasEdgeEffect
+                separator.isHidden = !component.hasEdgeEffect
+            }
             
             let headerTransition = transition
             
