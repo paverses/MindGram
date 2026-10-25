@@ -145,8 +145,8 @@ private final class MindGramDocumentPickerDelegate: NSObject, UIDocumentPickerDe
 func mindGramSettingsExportController(context: AccountContext) -> ViewController {
     var presentImpl: ((ViewController) -> Void)?
 
-    let topController: () -> UIViewController? = {
-        var controller = context.sharedContext.mainWindow?.viewController as UIViewController?
+    let topController: () -> UIViewController? = { () -> UIViewController? in
+        var controller: UIViewController? = context.sharedContext.mainWindow?.viewController as? UIViewController
         while let presented = controller?.presentedViewController {
             controller = presented
         }

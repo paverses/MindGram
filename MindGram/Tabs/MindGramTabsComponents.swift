@@ -76,7 +76,9 @@ final class MindGramTabBarPreviewComponent: Component {
                     items: items,
                     search: nil,
                     selectedId: selectedId,
-                    outerInsets: UIEdgeInsets()
+                    outerInsets: UIEdgeInsets(),
+                    axis: .horizontal,
+                    isCompact: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)

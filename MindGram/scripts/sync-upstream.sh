@@ -32,7 +32,7 @@ if [ "$TARGET" = "$BASE" ]; then
 fi
 
 PATCH="$(mktemp)"
-git diff --binary "$BASE" "$TARGET" > "$PATCH"
+git diff --binary --no-textconv --no-ext-diff "$BASE" "$TARGET" > "$PATCH"
 
 echo "Applying Telegram changes $BASE -> $TARGET ($TARGET_REF)"
 if git apply --3way --index "$PATCH"; then
